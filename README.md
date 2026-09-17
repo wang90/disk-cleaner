@@ -29,7 +29,7 @@ breakdown with hover tooltips, and per-app usage:
 ![DiskCleaner settings](docs/images/settings.png)
 
 **About** — its own window (menu **DiskCleaner → About DiskCleaner**), with the feature
-rundown, safety design and links:
+rundown, safety design and links to the repo and releases.
 
 ---
 
