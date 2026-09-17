@@ -5,9 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] — 2026-09-17
+## [1.0.0-beta] — 2026-09-17
 
-First public release. 🎉
+First public release — **beta**. 🎉
+
+Everything described below works and has been tested on macOS 14+; it is labelled beta
+because the UI is Simplified-Chinese-only and the build is not yet notarized.
 
 ### Added
 
@@ -59,4 +62,4 @@ First public release. 🎉
 - Release builds are **ad-hoc signed**, not notarized, so macOS Gatekeeper requires a
   right-click → Open on first launch.
 
-[1.0.0]: https://github.com/wang90/disk-cleaner/releases/tag/v1.0.0
+[1.0.0-beta]: https://github.com/wang90/disk-cleaner/releases/tag/v1.0.0-beta

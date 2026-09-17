@@ -47,7 +47,16 @@ struct ContentView: View {
             AppLogo(size: 34)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("磁盘清理").font(.system(size: 15, weight: .semibold))
+                HStack(spacing: 6) {
+                    Text("磁盘清理").font(.system(size: 15, weight: .semibold))
+                    Text("BETA")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(Color.orange.opacity(0.18)))
+                        .foregroundStyle(Color.orange)
+                        .help("1.0.0 beta：功能可用，但可能仍有一些问题")
+                }
                 Text("自动保持至少 \(model.targetGB) GB 可用空间")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -775,8 +784,13 @@ struct SettingsView: View {
     @ObservedObject var model: CleanerModel
     @Environment(\.dismiss) private var dismiss
 
+    /// "1.0.0-beta" -> "1.0.0 (beta)"
     private var version: String {
-        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.0.0"
+        let raw = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.0.0"
+        guard let dash = raw.firstIndex(of: "-") else { return raw }
+        let number = String(raw[raw.startIndex..<dash])
+        let tag = String(raw[raw.index(after: dash)...])
+        return "\(number) (\(tag))"
     }
 
     var body: some View {

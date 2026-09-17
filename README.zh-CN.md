@@ -50,8 +50,8 @@ DiskCleaner 会告诉你磁盘空间到底去哪了（整盘 + macOS「储存空
 
 ### 直接下载
 
-到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 下载最新的
-`DiskCleaner-v1.0.0-macos-universal.zip`，解压后把 `DiskCleaner.app` 拖进「应用程序」。
+到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 下载 `DiskCleaner-v1.0.0-beta-macos-universal.zip`
+（标记为 *Pre-release*，即测试版），解压后把 `DiskCleaner.app` 拖进「应用程序」。
 
 发布包是 **ad-hoc 签名**（未公证），首次打开会提示
 *"Apple 无法验证 DiskCleaner 是否包含恶意软件"*，这是正常的 ——
