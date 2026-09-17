@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>DiskCleaner</string>
+    <key>CFBundleDisplayName</key>
+    <string>DiskCleaner</string>
+    <key>CFBundleExecutable</key>
+    <string>DiskCleaner</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.github.wang90.diskcleaner</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>本地工具 · 仅清理缓存与日志</string>
+
+    <!-- 触发系统授权弹窗时显示的说明文案 -->
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>需要读取「桌面」上的文件，才能统计它占用了多少储存空间。</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>需要读取「文稿」文件夹，才能统计它占用了多少储存空间。</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>需要读取「下载」文件夹，才能统计它占用了多少储存空间（不会删除里面的文件）。</string>
+    <key>NSRemovableVolumesUsageDescription</key>
+    <string>需要读取外接硬盘，才能显示每块硬盘的使用情况。</string>
+</dict>
+</plist>

@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: Script checks
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check
+        run: bash -n scripts/diskautoclean.sh
+
+      - name: Help / version
+        run: |
+          ./scripts/diskautoclean.sh --version
+          ./scripts/diskautoclean.sh --help
+
+      - name: Status (JSON must be valid)
+        run: |
+          OUT="$(./scripts/diskautoclean.sh --status --json)"
+          echo "$OUT"
+          python3 -c "import json,sys; d=json.loads(sys.argv[1]); assert 'free_kb' in d" "$OUT"
+
+      - name: Volumes (JSON must be valid)
+        run: |
+          OUT="$(./scripts/diskautoclean.sh --volumes)"
+          echo "$OUT"
+          python3 -c "import json,sys; d=json.loads(sys.argv[1]); assert isinstance(d, list)" "$OUT"
+
+      - name: Build app
+        env:
+          NO_OPEN: "1"
+          DISKAPP_NO_PAUSE: "1"
+        run: ./build.command
+
+      - name: Verify bundle
+        run: |
+          plutil -lint DiskCleaner.app/Contents/Info.plist
+          lipo -archs DiskCleaner.app/Contents/MacOS/DiskCleaner
+          codesign --verify --deep DiskCleaner.app && echo "signature ok"
