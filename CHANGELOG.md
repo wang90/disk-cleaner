@@ -30,7 +30,12 @@ because the UI is Simplified-Chinese-only and the build is not yet notarized.
 - Background auto-clean toggle that installs/removes a `LaunchAgent`.
 - One-click permission request for macOS protected folders (triggers the system prompt and
   opens *Full Disk Access* settings).
-- Settings window with app info and theme selection: **Follow system / Light / Dark**.
+- Settings window with theme selection: **Follow system / Light / Dark**, auto-clean and
+  file locations.
+- **Dedicated About window** (`DiskCleaner → About DiskCleaner`, or the button at the
+  bottom of Settings): feature rundown, safety design, links to the repo and releases.
+- Version has a single source of truth (`Resources/Info.plist`) and is displayed as
+  `1.0.0 (beta)`; a `BETA` badge is shown in the header.
 - Decimal units for storage (matching macOS) and binary units for memory (matching
   About This Mac).
 

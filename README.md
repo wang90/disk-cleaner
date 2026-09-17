@@ -24,9 +24,12 @@ breakdown with hover tooltips, and per-app usage:
 
 ![DiskCleaner main window](docs/images/main-window.png)
 
-**Settings** — theme (system / light / dark), auto-clean, about:
+**Settings** — theme (system / light / dark), auto-clean, file locations:
 
 ![DiskCleaner settings](docs/images/settings.png)
+
+**About** — its own window (menu **DiskCleaner → About DiskCleaner**), with the feature
+rundown, safety design and links:
 
 ---
 
@@ -102,9 +105,10 @@ Launch `DiskCleaner.app`:
 | **Auto clean** | Install the LaunchAgent: check at login + every hour |
 | **123 button** | Show/hide sizes directly on the storage bar (hover always works) |
 | **Click a row** | Reveal that folder in Finder, or request permission if it is locked |
-| **⚙️ Settings** | Theme, auto-clean, app info |
+| **⚙️ Settings** | Theme (system / light / dark), auto-clean, file locations |
+| **About window** | **DiskCleaner → About DiskCleaner** in the menu bar, or the button at the bottom of Settings. Opens as its own window: what it does, safety design, and links |
 
-Keyboard: `⌘R` refresh · `⇧⌘R` rescan · `⌘K` clean · `⌘L` logs.
+Keyboard: `⌘R` refresh · `⇧⌘R` rescan · `⌘K` clean · `⌘L` logs · `⇧⌘S` storage scan.
 
 ### Command line
 

@@ -783,15 +783,7 @@ struct LogPanel: View {
 struct SettingsView: View {
     @ObservedObject var model: CleanerModel
     @Environment(\.dismiss) private var dismiss
-
-    /// "1.0.0-beta" -> "1.0.0 (beta)"
-    private var version: String {
-        let raw = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.0.0"
-        guard let dash = raw.firstIndex(of: "-") else { return raw }
-        let number = String(raw[raw.startIndex..<dash])
-        let tag = String(raw[raw.index(after: dash)...])
-        return "\(number) (\(tag))"
-    }
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 0) {
@@ -812,8 +804,8 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     appearanceSection
                     autoCleanSection
-                    aboutSection
                     filesSection
+                    aboutLinkSection
                 }
                 .padding(20)
             }
@@ -911,61 +903,47 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: 关于
-    private var aboutSection: some View {
-        SettingsGroup(title: "关于本应用", icon: "info.circle.fill") {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center, spacing: 14) {
-                    AppLogo(size: 56)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("磁盘清理").font(.system(size: 17, weight: .semibold))
-                        Text("版本 \(version)")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Text("原生 SwiftUI · 纯本地运行 · 不联网、不上传任何数据")
-                            .font(.caption).foregroundStyle(.secondary)
+    // MARK: 关于（入口，详细内容在独立的「关于」窗口里）
+    private var aboutLinkSection: some View {
+        SettingsGroup(title: "关于", icon: "info.circle.fill") {
+            HStack(alignment: .center, spacing: 14) {
+                AppLogo(size: 46)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("磁盘清理").font(.system(size: 15, weight: .semibold))
+                        if AppInfo.isBeta {
+                            Text("BETA")
+                                .font(.system(size: 9, weight: .bold))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Capsule().fill(Color.orange.opacity(0.18)))
+                                .foregroundStyle(Color.orange)
+                        }
                     }
-                    Spacer()
-                }
-
-                Text("一个 macOS 储存空间工具：查看整盘与各分类占用、列出每个应用占用的空间，"
-                     + "并在空间不足时自动清理缓存与日志，尽量保证系统始终保留至少 \(model.targetGB) GB 可用空间。")
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                VStack(alignment: .leading, spacing: 7) {
-                    aboutBullet("internaldrive", "硬盘与内存一屏看完，数字口径与 macOS「储存空间」一致")
-                    aboutBullet("chart.pie.fill", "macOS 风格的彩色堆叠条，鼠标划入色块即可看到具体大小")
-                    aboutBullet("square.grid.2x2.fill", "逐个列出应用占用（本体 + 用户数据），可点击定位")
-                    aboutBullet("layers", "三级清理：安全缓存 → 开发缓存 → 用户数据（默认只报告不删）")
-                    aboutBullet("shield.lefthalf.filled", "只删可重建的缓存与日志；文稿、照片、代码受保护")
-                }
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Label("安全说明", systemImage: "checkmark.shield.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.green)
-                    Text("清理目标全部写在脚本白名单里，且必须位于你的主目录内；"
-                         + "~/Documents、~/Desktop、~/Pictures、~/.ssh、~/Library/Keychains 等路径会被直接拒绝。"
-                         + "所有删除都会记录到 ~/Library/Logs/diskautoclean.log。")
+                    Text("版本 \(AppInfo.displayVersion)")
                         .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text("功能说明、安全设计与相关链接都在独立的「关于」窗口里")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.green.opacity(0.08)))
+
+                Spacer()
+
+                Button {
+                    openAbout()
+                } label: {
+                    Label("打开「关于」", systemImage: "arrow.up.forward.app")
+                }
+                .controlSize(.small)
             }
         }
     }
 
-    private func aboutBullet(_ icon: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 15)
-            Text(text)
-                .font(.caption)
-                .fixedSize(horizontal: false, vertical: true)
+    /// 打开独立的「关于」窗口（菜单 磁盘清理 → 关于 磁盘清理 是同一个入口）
+    private func openAbout() {
+        dismiss()
+        DispatchQueue.main.async {
+            openWindow(id: "about")
         }
     }
 

@@ -1,6 +1,29 @@
 import Foundation
 import SwiftUI
 
+// MARK: - 应用元信息（版本号只有 Info.plist 一个来源）
+
+enum AppInfo {
+    static let repoURL = "https://github.com/wang90/disk-cleaner"
+    static let releasesURL = "https://github.com/wang90/disk-cleaner/releases"
+
+    /// 原始版本号，例如 "1.0.0-beta"
+    static var shortVersion: String {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.0.0"
+    }
+
+    /// 展示用版本号："1.0.0-beta" -> "1.0.0 (beta)"
+    static var displayVersion: String {
+        let raw = shortVersion
+        guard let dash = raw.firstIndex(of: "-") else { return raw }
+        let number = String(raw[raw.startIndex..<dash])
+        let tag = String(raw[raw.index(after: dash)...])
+        return "\(number) (\(tag))"
+    }
+
+    static var isBeta: Bool { shortVersion.contains("-") }
+}
+
 /// 外观主题
 enum AppTheme: String, CaseIterable, Identifiable {
     case system, light, dark
