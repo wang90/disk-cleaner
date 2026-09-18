@@ -34,6 +34,12 @@ because the UI is Simplified-Chinese-only and the build is not yet notarized.
   file locations.
 - **Dedicated About window** (`DiskCleaner → About DiskCleaner`, or the button at the
   bottom of Settings): feature rundown, safety design, links to the repo and releases.
+- **Menu bar extra**: small icon in the menu bar showing the free space, with a popover
+  showing free space vs. target, whole-disk and memory usage, and quick actions
+  (open main window / clean / quit). Toggle it in Settings → 菜单栏.
+  The icon becomes a warning triangle when below target.
+  > Note: the About window is declared as a `WindowGroup`, not a `Window` — on macOS,
+  > declaring any `Window` scene silently prevents `MenuBarExtra` from appearing.
 - Version has a single source of truth (`Resources/Info.plist`) and is displayed as
   `1.0.0 (beta)`; a `BETA` badge is shown in the header.
 - Decimal units for storage (matching macOS) and binary units for memory (matching

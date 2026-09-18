@@ -52,6 +52,10 @@ final class CleanerModel: ObservableObject {
     @Published var showStorageLabels: Bool = false { didSet { save() } }
     /// 外观主题
     @Published var theme: AppTheme = .system { didSet { save() } }
+    /// 菜单栏常驻小图标
+    @Published var showMenuBarExtra: Bool = true { didSet { save() } }
+    /// 菜单栏图标旁是否显示可用空间数字
+    @Published var showMenuBarText: Bool = true { didSet { save() } }
 
     // MARK: - 自动清理
     @Published var autoCleanInstalled = false
@@ -476,6 +480,8 @@ final class CleanerModel: ObservableObject {
         d.set(allowUserData, forKey: "allowUserData")
         d.set(showStorageLabels, forKey: "showStorageLabels")
         d.set(theme.rawValue, forKey: "theme")
+        d.set(showMenuBarExtra, forKey: "showMenuBarExtra")
+        d.set(showMenuBarText, forKey: "showMenuBarText")
     }
 
     private func load() {
@@ -488,5 +494,23 @@ final class CleanerModel: ObservableObject {
         if d.object(forKey: "allowUserData") != nil { allowUserData = d.bool(forKey: "allowUserData") }
         if d.object(forKey: "showStorageLabels") != nil { showStorageLabels = d.bool(forKey: "showStorageLabels") }
         if let raw = d.string(forKey: "theme"), let t = AppTheme(rawValue: raw) { theme = t }
+        if d.object(forKey: "showMenuBarExtra") != nil { showMenuBarExtra = d.bool(forKey: "showMenuBarExtra") }
+        if d.object(forKey: "showMenuBarText") != nil { showMenuBarText = d.bool(forKey: "showMenuBarText") }
+    }
+
+    // MARK: - 菜单栏显示
+    /// 菜单栏里的紧凑数字，例如 "21.8G" / "1.2T"
+    var freeSpaceShort: String {
+        let gb = Double(freeKB) * 1024 / 1e9
+        if gb >= 1000 { return String(format: "%.1fT", gb / 1000) }
+        if gb >= 100 { return String(format: "%.0fG", gb) }
+        return String(format: "%.1fG", gb)
+    }
+
+    /// 菜单栏图标：低于目标时换成警告图标
+    var menuBarSymbol: String {
+        if isCleaning { return "arrow.triangle.2.circlepath" }
+        if isScanning { return "arrow.triangle.2.circlepath" }
+        return isTargetMet ? "internaldrive.fill" : "exclamationmark.triangle.fill"
     }
 }

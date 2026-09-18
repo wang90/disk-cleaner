@@ -48,6 +48,10 @@ rundown, safety design and links to the repo and releases.
   sorted by size, click to reveal in Finder.
 - **Correct numbers** — decimal units for storage (`245.1 GB`, exactly what macOS shows)
   and binary units for memory (`16 GB`), matching Apple's conventions.
+- **Menu bar extra** — a small icon in the menu bar (with the free space next to it, if you
+  like). Click it for a popover with free space, whole-disk and memory usage, plus buttons to
+  open the main window, clean, or quit. The icon turns into a warning triangle when you are
+  below your target.
 - **Three safety tiers** — safe caches → developer caches → user data (opt-in only).
 - **No dependencies** — pure SwiftUI + a POSIX shell script. No Homebrew, no Python.
   Runs on the built-in Command Line Tools.
@@ -107,6 +111,7 @@ Launch `DiskCleaner.app`:
 | **Click a row** | Reveal that folder in Finder, or request permission if it is locked |
 | **⚙️ Settings** | Theme (system / light / dark), auto-clean, file locations |
 | **About window** | **DiskCleaner → About DiskCleaner** in the menu bar, or the button at the bottom of Settings. Opens as its own window: what it does, safety design, and links |
+| **Menu bar icon** | Click it any time for a popover with free space / disk / memory, and quick actions. Configurable in Settings → 菜单栏 |
 
 Keyboard: `⌘R` refresh · `⇧⌘R` rescan · `⌘K` clean · `⌘L` logs · `⇧⌘S` storage scan.
 

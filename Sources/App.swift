@@ -48,7 +48,7 @@ struct DiskCleanerApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("磁盘清理") {
+        WindowGroup("磁盘清理", id: "main") {
             rootView
                 .preferredColorScheme(model.theme.colorScheme)
                 .task { await model.bootstrap() }
@@ -98,11 +98,28 @@ struct DiskCleanerApp: App {
         }
 
         // 独立的「关于」窗口（可同时开着主窗口）
-        Window("关于 磁盘清理", id: "about") {
+        // 注意：这里必须用 WindowGroup 而不是 Window —— 实测在 macOS 上
+        // 只要声明了 Window 场景，MenuBarExtra 就不会出现在菜单栏里。
+        WindowGroup("关于 磁盘清理", id: "about") {
             AboutView(model: model)
                 .preferredColorScheme(model.theme.colorScheme)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+
+        // 菜单栏常驻小图标：点击查看当前储存空间 / 内存使用量
+        // 用 isInserted 绑定控制显隐（SceneBuilder 不支持 if）
+        MenuBarExtra(isInserted: $model.showMenuBarExtra) {
+            MenuBarPanel(model: model)
+                .preferredColorScheme(model.theme.colorScheme)
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: model.menuBarSymbol)
+                if model.showMenuBarText {
+                    Text(model.freeSpaceShort)
+                }
+            }
+        }
+        .menuBarExtraStyle(.window)
     }
 }

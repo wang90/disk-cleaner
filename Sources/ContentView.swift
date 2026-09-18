@@ -803,6 +803,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     appearanceSection
+                    menuBarSection
                     autoCleanSection
                     filesSection
                     aboutLinkSection
@@ -875,6 +876,21 @@ struct SettingsView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { model.theme = t }
+    }
+
+    // MARK: 菜单栏
+    private var menuBarSection: some View {
+        SettingsGroup(title: "菜单栏", icon: "menubar.rectangle") {
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle("在菜单栏显示小图标", isOn: $model.showMenuBarExtra)
+                Toggle("图标旁显示可用空间数字", isOn: $model.showMenuBarText)
+                    .disabled(!model.showMenuBarExtra)
+                Text("点击菜单栏图标可随时查看可用空间、硬盘与内存占用，并能直接打开主窗口或开始清理。"
+                     + "空间低于目标时图标会变成感叹号。")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
     // MARK: 自动清理
