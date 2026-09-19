@@ -45,6 +45,14 @@ because the UI is Simplified-Chinese-only and the build is not yet notarized.
 - Decimal units for storage (matching macOS) and binary units for memory (matching
   About This Mac).
 
+### Fixed
+
+- **Crash on launch** (`EXC_BAD_ACCESS` / "Could not determine thread index for stack guard
+  region"): declaring the command menu inline in `App.body`'s `.commands { }` made this
+  toolchain emit a recursive opaque type for `View.keyboardShortcut(_:)`, and resolving the
+  type metadata at startup blew the stack. The menus now live in a dedicated
+  `AppCommands: Commands` type — same items, same shortcuts, no crash.
+
 **Engine (`scripts/diskautoclean.sh`)**
 
 - Auto-cleaning that stops as soon as the free-space target is met.
@@ -62,8 +70,7 @@ because the UI is Simplified-Chinese-only and the build is not yet notarized.
 **Project**
 
 - `build.command` — builds a universal (arm64 + x86_64) `DiskCleaner.app` using only the
-  macOS Command Line Tools.
-- `release.command` — builds, zips (`ditto`) and emits a SHA-256 checksum into `dist/`.
+  macOS Command Line Tools.- `release.command` — builds, zips (`ditto`) and emits a SHA-256 checksum into `dist/`.
 - GitHub Actions workflows for CI and tagged releases.
 - Procedurally generated app icon (`tools/make_icon.py`, standard library only).
 
