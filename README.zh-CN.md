@@ -50,7 +50,7 @@ DiskCleaner 会告诉你磁盘空间到底去哪了（整盘 + macOS「储存空
 
 ### 直接下载
 
-到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 下载 `DiskCleaner-v1.0.0-beta.2-macos-universal.zip`
+到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 下载 `DiskCleaner-v1.0.0-beta.3-macos-universal.zip`
 （标记为 *Pre-release*，即测试版），解压后把 `DiskCleaner.app` 拖进「应用程序」。
 
 发布包是 **ad-hoc 签名**（未公证），首次打开会提示
@@ -150,6 +150,46 @@ xcode-select --install
 这样正在写日志的进程不受影响，空间却立刻释放。
 
 ---
+
+## 应用数据管理（含聊天记录）
+
+应用列表里每一行右边都有一个 ⚙︎ 按钮，点开就是该应用的数据管理器：
+
+```
+┌ 微信 ──────────────────────────── com.tencent.xinWeChat ── 4.1 GB ─┐
+│ ✅ 可以安全清理        缓存与日志，应用会自动重建                    │
+│   ☑ Cache                       缓存      766 MB                   │
+│   ☑ Code Cache                  缓存      194 MB                   │
+│ ⚠️ 需要谨慎            可能含聊天记录、数据库、登录状态，删除不可恢复  │
+│   ☐ Message                     用户数据  1.2 GB    🔒              │
+│   ☐ History                     用户数据   18 MB    🔒              │
+│   [ ] 我了解风险，允许选择上面这些项目                               │
+│ 已选 2 项   960 MB                              [ 删除选中项 ]      │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+**分类规则**（按文件夹名字判断）
+
+| 分类 | 匹配的名字 | 默认 |
+|---|---|---|
+| `缓存` | 含 `cache`、`tmp`、`temp`、`sparkle`、`shipit` 等 | ☑ 自动勾选 |
+| `日志` | 含 `log`、`crashreport`、`diagnostic` | ☑ 自动勾选 |
+| `用户数据` | 含 `message`、`chat`、`session`、`history`、`contact`、`storage`、`.db`、`sqlite`、`backup` 等 | 🔒 锁定 |
+| `未知` | 其它一切 | 🔒 锁定 |
+
+> ⚠️ **这只是按名字猜的，不保证准确。** 没有任何程序能靠文件名 100% 分辨"聊天数据库"和"缓存"。
+> 没匹配上的一律按「未知」锁住。**删除聊天记录不可恢复，请先备份。**
+> 工具**永远不会**自动碰这些用户数据——它们不在任何自动清理等级里。
+
+**几点说明**
+
+- macOS 的 TCC 会保护应用容器。如果读不到某个应用的数据目录，请在
+  **设置 → 权限** 里给它「完全磁盘访问权限」，然后重新打开数据管理器。
+- 有些应用会把数据放在 `~/Library` 之外（微信允许把聊天文件存到你自选的目录）。
+  DiskCleaner 只扫描主目录下的标准位置，**不会**到处去找。
+- 真正的删除由 `diskautoclean.sh --app-clean <路径>…` 执行，它会再次校验每个路径
+  都在 `$HOME` 内且不在受保护列表里——所以即使界面有 bug，也删不掉
+  `~/Documents`、`~/Library/Keychains` 这类东西。
 
 ## 安全设计
 

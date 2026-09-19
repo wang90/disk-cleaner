@@ -14,7 +14,7 @@
 
 set -u
 
-VERSION="1.0.0-beta.2"
+VERSION="1.0.0-beta.3"
 
 # ------------------------------ 默认参数 -----------------------------------
 TARGET_FREE_KB=$((10 * 1000 * 1000 * 1000 / 1024))   # 目标：10 GB（十进制，跟 macOS 一致）
@@ -27,6 +27,8 @@ PURGE_MEM=0                            # 是否顺带清理内存（purge）
 ALLOW_ROOT=0
 MODE=""                                # scan / status / 空=清理
 JSON=0                                 # 输出 JSON（给 GUI 用）
+APP_DETAIL_PATH=""                     # --app-detail 的应用路径
+APP_CLEAN_PATHS=()                     # --app-clean 要删除的路径
 MACHINE="${DISKAUTOCLEAN_MACHINE:-0}"  # 输出 @@ 机器可读进度行
 KB_TIMEOUT="${DISKAUTOCLEAN_KB_TIMEOUT:-40}"  # 单个路径 du 的硬超时（秒）
 APP_TIMEOUT="${DISKAUTOCLEAN_APP_TIMEOUT:-12}" # 扫描单个 .app 的硬超时（秒）
@@ -734,6 +736,206 @@ do_storage() {
 }
 
 # ----------------------------------------------------------------------------
+# 应用数据的分类规则
+#
+#   cache    —— 可重建，删除安全
+#   log      —— 日志，删除安全
+#   userdata —— 可能含聊天记录 / 数据库 / 登录态，删除不可恢复（界面默认不勾选）
+#   unknown  —— 看不清是什么，按 userdata 保守对待
+# ----------------------------------------------------------------------------
+classify_app_item() {
+  local n
+  n=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  case "$n" in
+    *cache*|*tmp|temp|*crashpad*|*gpupersistent*|*dawngraphite*|*sparkle*|*shipit*)
+      printf 'cache' ;;
+    *log*|*crashreport*|*diagnostic*)
+      printf 'log' ;;
+    *message*|*msg*|*chat*|*conversation*|*session*|*history*|*record*|*contact*|\
+*group*|*storage*|*database*|*db|*.sqlite*|*sqlite*|*backup*|*document*|*emoticon*|\
+*sticker*|*favorite*|*collection*|*account*|*profile*)
+      printf 'userdata' ;;
+    *)
+      printf 'unknown' ;;
+  esac
+}
+
+# ----------------------------------------------------------------------------
+# --app-detail <App.app>   列出该应用的数据子项及分类（支持 --json）
+# ----------------------------------------------------------------------------
+do_app_detail() {
+  local app="$1" bid name tmp line root sub d x base sz kind k
+  [ -n "${app:-}" ] || { warn "缺少应用路径"; return 1; }
+  [ -d "$app" ] || { warn "应用不存在: $app"; return 1; }
+
+  name=$(basename "$app" .app)
+  bid=""
+  if [ -f "$app/Contents/Info.plist" ]; then
+    bid=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist" 2>/dev/null | head -1 | tr -d '\r')
+  fi
+  [ -n "$bid" ] || bid="$name"
+
+  tmp=$(mktemp "${TMPDIR%/}/diskautoclean.appdata.XXXXXX" 2>/dev/null) || tmp=""
+  [ -n "$tmp" ] || { warn "无法创建临时文件"; return 1; }
+
+  KB_TIMEOUT="${APP_DETAIL_TIMEOUT:-20}"
+
+  emit_item() {
+    local p="$1" b s kk
+    [ -e "$p" ] || return 0
+    b=$(basename "$p")
+    case "$b" in .*) return 0 ;; esac
+    kb_of "$p"; s=$KB_LAST_KB
+    [ "$s" -lt 256 ] && return 0
+    kk=$(classify_app_item "$b")
+    printf '%s\t%s\t%s\t%s\n' "$s" "$kk" "$b" "$p" >>"$tmp"
+  }
+
+  scan_root() {
+    local r="$1" depth="${2:-0}" y b
+    [ -d "$r" ] || return 0
+    [ "$depth" -ge 3 ] && return 0
+
+    if [ -d "$r/Data" ]; then
+      for y in "$r/Data/Library/Caches" "$r/Data/tmp" "$r/Data/Library/Logs"; do
+        [ -e "$y" ] && emit_item "$y"
+      done
+      if [ -d "$r/Data/Library/Application Support" ]; then
+        for y in "$r/Data/Library/Application Support"/*; do
+          [ -e "$y" ] && emit_item "$y"
+        done
+      fi
+      for y in "$r/Data/Documents"; do
+        [ -e "$y" ] && emit_item "$y"
+      done
+      return 0
+    fi
+
+    for y in "$r"/*; do
+      [ -e "$y" ] || continue
+      b=$(basename "$y")
+      case "$b" in
+        .*) continue ;;
+        # 「档案目录」：真正的内容在它们里面，再下钻一层
+        Default|Default\ *|Profile\ *|Profiles|User\ Data|Data|*User\ Data)
+          scan_root "$y" $(( depth + 1 )) ;;
+        *)
+          emit_item "$y" ;;
+      esac
+    done
+  }
+
+  local roots=()
+  [ -d "$HOME/Library/Containers/$bid" ] && roots[${#roots[@]}]="$HOME/Library/Containers/$bid"
+  [ -d "$HOME/Library/Application Support/$bid" ] && roots[${#roots[@]}]="$HOME/Library/Application Support/$bid"
+  [ -d "$HOME/Library/Caches/$bid" ] && roots[${#roots[@]}]="$HOME/Library/Caches/$bid"
+  for d in "$HOME/Library/Group Containers"/*"$bid"*; do
+    [ -d "$d" ] && roots[${#roots[@]}]="$d"
+  done
+
+  # 回退：像 Google Chrome（com.google.Chrome）这类应用，数据放在
+  # ~/Library/Application Support/<厂商>/<产品>，目录名不是 bundle id。
+  if [ "${#roots[@]}" -eq 0 ]; then
+    local vendor leaf base child lc
+    vendor=$(printf '%s' "$bid" | awk -F. '{print $2}')
+    leaf=$(printf '%s' "$bid" | awk -F. '{print $NF}')
+    if [ -n "$vendor" ]; then
+      for base in "$HOME/Library/Application Support" "$HOME/Library/Caches"; do
+        for d in "$base"/*; do
+          [ -d "$d" ] || continue
+          lc=$(printf '%s' "$(basename "$d")" | tr '[:upper:]' '[:lower:]')
+          [ "$lc" = "$(printf '%s' "$vendor" | tr '[:upper:]' '[:lower:]')" ] || continue
+          child=""
+          for child in "$d"/*; do
+            [ -d "$child" ] || continue
+            lc=$(printf '%s' "$(basename "$child")" | tr '[:upper:]' '[:lower:]')
+            if [ "$lc" = "$(printf '%s' "$leaf" | tr '[:upper:]' '[:lower:]')" ]; then
+              roots[${#roots[@]}]="$child"
+              break
+            fi
+          done
+          [ "${#roots[@]}" -eq 0 ] && roots[${#roots[@]}]="$d"
+        done
+      done
+    fi
+  fi
+
+  local i
+  for ((i = 0; i < ${#roots[@]}; i++)); do
+    scan_root "${roots[$i]}"
+  done
+
+  if [ "$JSON" -eq 1 ]; then
+    local out="" first=1 roots_json=""
+    while IFS="$(printf '\t')" read -r sz kind base path; do
+      [ -n "${sz:-}" ] || continue
+      [ "$first" -eq 1 ] || out="$out,"
+      first=0
+      out="$out{\"label\":\"$(json_escape "$base")\",\"path\":\"$(json_escape "$path")\",\"kb\":$sz,\"kind\":\"$kind\"}"
+    done < <(sort -nr "$tmp")
+
+    first=1
+    local ri
+    for ((ri = 0; ri < ${#roots[@]}; ri++)); do
+      [ "$first" -eq 1 ] || roots_json="$roots_json,"
+      first=0
+      roots_json="$roots_json\"$(json_escape "${roots[$ri]}")\""
+    done
+    rm -f "$tmp"
+    printf '{"name":"%s","app_path":"%s","bundle_id":"%s","roots":[%s],"items":[%s]}\n' \
+      "$(json_escape "$name")" "$(json_escape "$app")" "$(json_escape "$bid")" "$roots_json" "$out"
+    return 0
+  fi
+
+  printf '%-32s %-12s %10s\n' "子项" "分类" "占用"
+  printf '%s\n' "---------------------------------------------------------------"
+  while IFS="$(printf '\t')" read -r sz kind base path; do
+    [ -n "${sz:-}" ] || continue
+    case "$kind" in
+      cache)    k="✅ 缓存" ;;
+      log)      k="✅ 日志" ;;
+      userdata) k="⚠️ 用户数据" ;;
+      *)        k="⚠️ 未知" ;;
+    esac
+    printf '%-32s %-12s %10s\n' "$base" "$k" "$(human "$sz")"
+  done < <(sort -nr "$tmp")
+  printf '%s\n' "---------------------------------------------------------------"
+  printf '“用户数据 / 未知”可能含聊天记录、数据库、登录状态，删除后不可恢复。\n'
+  rm -f "$tmp"
+}
+
+# ----------------------------------------------------------------------------
+# --app-clean <path>...   只删除显式列出的路径（供界面按勾选清理）
+# ----------------------------------------------------------------------------
+do_app_clean() {
+  local p sz
+  [ "$#" -gt 0 ] || { warn "没有指定要清理的路径"; return 1; }
+  for p in "$@"; do
+    case "$p/" in
+      "$HOME"/*) : ;;
+      *) log "  [跳过] 不在主目录内: $p"; continue ;;
+    esac
+    if is_protected "$p"; then
+      log "  [跳过] 受保护路径: $p"
+      continue
+    fi
+    [ -e "$p" ] || continue
+    kb_of "$p"; sz=$KB_LAST_KB
+    if rm -rf -- "$p" 2>/dev/null; then
+      log "  [已删] $p  ($(human "$sz"))"
+    else
+      log "  [失败] 无法删除 $p"
+      continue
+    fi
+    FREED_KB=$((FREED_KB + sz))
+    DELETED_COUNT=$((DELETED_COUNT + 1))
+    emit_freed "$sz" "$p"
+  done
+  if [ "$MACHINE" -eq 1 ]; then printf '@@DONE\t%s\t%s\n' "$FREED_KB" "$DELETED_COUNT"; fi
+  return 0
+}
+
+# ----------------------------------------------------------------------------
 # 主流程
 # ----------------------------------------------------------------------------
 main() {
@@ -758,6 +960,13 @@ main() {
       --scan)       MODE="scan"; shift ;;
       --status)     MODE="status"; shift ;;
       --apps)       MODE="apps"; shift ;;
+      --app-detail)
+        [ $# -ge 2 ] || { warn "--app-detail 缺少参数"; exit 2; }
+        APP_DETAIL_PATH="$2"; MODE="appdetail"; shift 2 ;;
+      --app-clean)
+        MODE="appclean"; shift
+        APP_CLEAN_PATHS=("$@")      # 其余参数全部当作要删除的路径
+        set -- ;;
       --storage)    MODE="storage"; shift ;;
       --volumes)    MODE="volumes"; shift ;;
       --version|-V) echo "diskautoclean $VERSION"; exit 0 ;;
@@ -770,6 +979,16 @@ main() {
   if [ "$MODE" = "status" ]; then do_status; exit 0; fi
   if [ "$MODE" = "scan" ];   then do_scan;   exit 0; fi
   if [ "$MODE" = "apps" ];   then do_apps;   exit 0; fi
+  if [ "$MODE" = "appdetail" ]; then do_app_detail "$APP_DETAIL_PATH"; exit 0; fi
+  if [ "$MODE" = "appclean" ]; then
+    setup_log
+    if [ "${#APP_CLEAN_PATHS[@]}" -gt 0 ]; then
+      do_app_clean "${APP_CLEAN_PATHS[@]}"
+    else
+      warn "没有指定要清理的路径"
+    fi
+    exit 0
+  fi
   if [ "$MODE" = "storage" ]; then do_storage; exit 0; fi
   if [ "$MODE" = "volumes" ]; then volumes_json; printf '\n'; exit 0; fi
 

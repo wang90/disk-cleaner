@@ -36,6 +36,15 @@ final class CleanerModel: ObservableObject {
     @Published var isScanningStorage = false
     @Published var storageLoaded = false
 
+    // MARK: - 单个应用的数据明细
+    @Published var detailApp: AppItem?
+    @Published var appDetail: AppDetailPayload?
+    @Published var isLoadingDetail = false
+    @Published var detailSelection: Set<String> = []
+    /// 是否允许勾选「用户数据 / 未知」项（默认关闭，必须由用户显式打开）
+    @Published var allowRiskyDeletion = false
+    @Published var isCleaningAppData = false
+
     // MARK: - 清理进度
     @Published var logs: [LogEntry] = []
     @Published var progress: Double = 0
@@ -236,6 +245,73 @@ final class CleanerModel: ObservableObject {
         appsLoaded = true
         let totalKB = apps.reduce(0) { $0 + $1.totalKB }
         appendLog("已统计 \(apps.count) 个应用，合计 \(Fmt.size(totalKB))。", .ok)
+    }
+
+    // MARK: - 应用数据明细 / 清理
+    func loadAppDetail(_ app: AppItem) async {
+        guard let script = scriptURL else { return }
+        detailApp = app
+        appDetail = nil
+        detailSelection = []
+        allowRiskyDeletion = false
+        isLoadingDetail = true
+        appendLog("正在读取「\(app.name)」的数据明细…", .info)
+
+        let (code, out) = await Shell.capture(script: script,
+                                              args: ["--app-detail", app.path, "--json"],
+                                              extraEnv: ["DISKAUTOCLEAN_APP_TIMEOUT": "12",
+                                                         "DISKAUTOCLEAN_APP_DETAIL_TIMEOUT": "20"])
+        isLoadingDetail = false
+        guard code == 0, let data = out.data(using: .utf8),
+              let payload = try? JSONDecoder().decode(AppDetailPayload.self, from: data) else {
+            appendLog("读取「\(app.name)」的数据明细失败（可能没有权限，或该应用没有独立数据目录）。", .err)
+            return
+        }
+        appDetail = payload
+        detailSelection = Set(payload.safeItems.map(\.path))   // 默认只勾安全的
+        appendLog("「\(app.name)」：共 \(payload.items.count) 项，其中缓存/日志 \(payload.safeItems.count) 项已默认勾选。", .ok)
+    }
+
+    /// 当前勾选项目的总大小
+    var detailSelectedKB: Int {
+        guard let d = appDetail else { return 0 }
+        return d.items.filter { detailSelection.contains($0.path) }.reduce(0) { $0 + $1.kb }
+    }
+
+    /// 勾选项里是否包含用户数据/未知（用来决定是否弹出危险确认）
+    var detailHasRiskySelection: Bool {
+        guard let d = appDetail else { return false }
+        return d.items.contains { detailSelection.contains($0.path) && !$0.isSafe }
+    }
+
+    func cleanSelectedAppData() async {
+        guard let script = scriptURL, let detail = appDetail, !isCleaningAppData else { return }
+        let paths = detail.items.filter { detailSelection.contains($0.path) }.map(\.path)
+        guard !paths.isEmpty else { return }
+
+        isCleaningAppData = true
+        freedKB = 0
+        appendLog("=== 清理「\(detail.name)」的数据：\(paths.count) 项 ===", .info)
+
+        var args = ["--machine", "--app-clean"]
+        args.append(contentsOf: paths)
+
+        _ = await Shell.stream(script: script, args: args) { [weak self] line in
+            DispatchQueue.main.async { self?.handle(line: line) }
+        }
+
+        isCleaningAppData = false
+        banner = "已清理「\(detail.name)」\(Fmt.size(freedKB))"
+        await refreshStatus()
+        await scanApps()
+        if let app = detailApp { await loadAppDetail(app) }   // 刷新明细
+    }
+
+    func closeAppDetail() {
+        detailApp = nil
+        appDetail = nil
+        detailSelection = []
+        allowRiskyDeletion = false
     }
 
     // MARK: - 清理

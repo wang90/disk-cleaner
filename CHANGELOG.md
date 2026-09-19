@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.3] — 2026-09-20
+
+### Added
+
+- **Per-app data manager** (click ⚙︎ on any row of the app list).
+  - Shows the folders an app keeps in `~/Library` with their sizes, classified as
+    `cache` / `log` / `userdata` / `unknown`.
+  - Cache and log items are preselected; **user data and unknown items are locked** behind an
+    explicit "I understand the risk" switch, and a second confirmation before deleting.
+  - Works for sandboxed apps (`~/Library/Containers/<bundle-id>`), plain apps
+    (`~/Library/Application Support/<bundle-id>`), and vendor-style layouts such as
+    `~/Library/Application Support/Google/Chrome/Default` (descends into profile folders).
+  - New engine commands: `--app-detail <App.app> [--json]` and
+    `--app-clean <path>…` (deletes only the exact paths given, re-checking the home
+    whitelist and the protected-path list).
+
+> ⚠️ The classification is a **name-based heuristic**. Chat histories and databases are
+> matched by keywords (`message`, `chat`, `session`, `history`, `.db`, `sqlite`, …), but no
+> tool can identify them with certainty, so anything unrecognised is locked too. Automatic
+> cleaning never touches user data.
+
+### Fixed
+
+- The app-data scanner no longer aborts when an app has no data directory
+  (`roots[@]: unbound variable` with `set -u` under bash 3.2).
+
 ## [1.0.0-beta.2] — 2026-09-19
 
 Bug-fix release. **If you downloaded `v1.0.0-beta`, please replace it with this build** —

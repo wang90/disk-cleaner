@@ -452,12 +452,20 @@ struct AppsCard: View {
             } else {
                 VStack(spacing: 2) {
                     ForEach(model.apps.prefix(60)) { app in
-                        AppRow(app: app, maxKB: maxKB) { model.reveal(app.path) }
+                        AppRow(app: app, maxKB: maxKB,
+                               onReveal: { model.reveal(app.path) },
+                               onManage: { Task { await model.loadAppDetail(app) } })
                     }
                 }
             }
         }
         .card()
+        .sheet(item: $model.detailApp) { _ in
+            AppDetailView(model: model)
+        }
+        .onChange(of: model.detailApp) { app in
+            if app == nil { model.closeAppDetail() }
+        }
     }
 }
 
@@ -465,6 +473,7 @@ struct AppRow: View {
     let app: AppItem
     let maxKB: Int
     let onReveal: () -> Void
+    var onManage: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 10) {
@@ -496,6 +505,14 @@ struct AppRow: View {
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
                 .frame(width: 82, alignment: .trailing)
+
+            Button {
+                onManage()
+            } label: {
+                Image(systemName: "slider.horizontal.below.rectangle")
+            }
+            .buttonStyle(.borderless)
+            .help("管理该应用的数据（选择性清理）")
         }
         .padding(.vertical, 5)
         .padding(.horizontal, 8)

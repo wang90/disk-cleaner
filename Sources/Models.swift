@@ -192,6 +192,46 @@ struct AppsPayload: Codable {
     }
 }
 
+// MARK: - 单个应用的数据明细（--app-detail --json）
+
+struct AppDataItem: Codable, Identifiable, Hashable {
+    var id: String { path }
+    let label: String
+    let path: String
+    let kb: Int
+    /// cache / log / userdata / unknown
+    let kind: String
+
+    /// 可以放心删的（缓存与日志）
+    var isSafe: Bool { kind == "cache" || kind == "log" }
+
+    var kindText: String {
+        switch kind {
+        case "cache":    return "缓存"
+        case "log":      return "日志"
+        case "userdata": return "用户数据"
+        default:         return "未知"
+        }
+    }
+}
+
+struct AppDetailPayload: Codable {
+    let name: String
+    let appPath: String
+    let bundleID: String
+    let roots: [String]
+    let items: [AppDataItem]
+
+    enum CodingKeys: String, CodingKey {
+        case name, roots, items
+        case appPath = "app_path"
+        case bundleID = "bundle_id"
+    }
+
+    var safeItems: [AppDataItem] { items.filter { $0.isSafe } }
+    var riskyItems: [AppDataItem] { items.filter { !$0.isSafe } }
+}
+
 struct ScanPayload: Codable {
     let freeKB: Int
     let targetKB: Int

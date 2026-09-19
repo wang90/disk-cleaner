@@ -9,7 +9,7 @@ caches and logs in the background so your Mac never runs out of space.
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--beta.2-orange)](#download)
+[![Release](https://img.shields.io/badge/release-v1.0.0--beta.3-orange)](#download)
 
 > **Note:** the app UI is currently in **Simplified Chinese**.
 > English localization is on the [roadmap](#roadmap) — PRs are very welcome.
@@ -46,6 +46,11 @@ rundown, safety design and links to the repo and releases.
 - **Per-app usage** — every app's bundle size **plus its user data**
   (`~/Library/Containers`, `~/Library/Caches`, `~/Library/Application Support`),
   sorted by size, click to reveal in Finder.
+- **Per-app data manager** — click the ⚙︎ next to any app to see the folders it keeps in
+  `~/Library`, split into **cache / logs** (safe, preselected) and **user data / unknown**
+  (chat histories, databases, login state). The risky ones are **locked** until you flip an
+  explicit "I understand" switch, and deleting them asks for confirmation again. Deletion
+  still goes through the same home-whitelist + protected-path rules.
 - **Correct numbers** — decimal units for storage (`245.1 GB`, exactly what macOS shows)
   and binary units for memory (`16 GB`), matching Apple's conventions.
 - **Menu bar extra** — a small icon in the menu bar (with the free space next to it, if you
@@ -64,7 +69,7 @@ rundown, safety design and links to the repo and releases.
 
 ### Download
 
-Grab `DiskCleaner-v1.0.0-beta.2-macos-universal.zip` from
+Grab `DiskCleaner-v1.0.0-beta.3-macos-universal.zip` from
 **[Releases](https://github.com/wang90/disk-cleaner/releases)** (marked *Pre-release*), unzip, and drag
 `DiskCleaner.app` into `/Applications`.
 
@@ -166,6 +171,49 @@ Huge log files (like a 20 GB `gateway.log`) are **truncated, not deleted**, so t
 writing them keeps working while the space is reclaimed instantly.
 
 ---
+
+## Per-app data manager
+
+The app list shows how much space every application uses. Click the ⚙︎ button on a row to
+open its data manager:
+
+```
+┌ WeChat ───────────────────────── com.tencent.xinWeChat ── 4.1 GB ─┐
+│ ✅ 可以安全清理        缓存与日志，应用会自动重建                   │
+│   ☑ Cache                       缓存      766 MB                  │
+│   ☑ Code Cache                  缓存      194 MB                  │
+│ ⚠️ 需要谨慎            可能含聊天记录、数据库、登录状态，删除不可恢复  │
+│   ☐ Message                     用户数据  1.2 GB    🔒             │
+│   ☐ History                     用户数据   18 MB    🔒             │
+│   [ ] 我了解风险，允许选择上面这些项目                              │
+│ 已选 2 项   960 MB                              [ 删除选中项 ]     │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+**How the classification works**
+
+| Kind | What it matches | Default |
+|---|---|---|
+| `cache` | `*cache*`, `tmp`, `temp`, `*crashpad*`, `*sparkle*`, `*shipit*` … | ☑ preselected |
+| `log` | `*log*`, `*crashreport*`, `*diagnostic*` | ☑ preselected |
+| `userdata` | `*message*`, `*chat*`, `*session*`, `*history*`, `*contact*`, `*storage*`, `*.db`, `*sqlite*`, `*backup*`, `*document*` … | 🔒 locked |
+| `unknown` | anything else | 🔒 locked |
+
+> **This is a name-based heuristic, not a guarantee.** Nothing can reliably tell a chat
+> database from a cache by name. Anything not matched is treated as *unknown* and locked.
+> **Deleting chat history is irreversible — back up first.** The tool will never touch these
+> by itself, and they are never part of the automatic cleaning.
+
+**Notes**
+
+- macOS protects most app containers behind TCC. If DiskCleaner cannot read an app's folder,
+  grant it **Full Disk Access** (Settings → 权限) and reopen the data manager.
+- Some apps keep their data outside `~/Library` (e.g. WeChat can store chat files in a
+  folder you chose yourself). DiskCleaner only looks at the standard locations under your
+  home folder — it will never go hunting elsewhere.
+- Deletion runs through `diskautoclean.sh --app-clean <path>…`, which re-checks that every
+  path is inside `$HOME` and not in the protected list, so a bug in the UI cannot delete
+  something like `~/Documents` or `~/Library/Keychains`.
 
 ## Safety
 
