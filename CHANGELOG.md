@@ -5,6 +5,45 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.2] — 2026-09-19
+
+Bug-fix release. **If you downloaded `v1.0.0-beta`, please replace it with this build** —
+the first beta crashed on launch roughly one time in three.
+
+### Fixed
+
+- **Random crash on launch.** `EXC_BAD_ACCESS` (SIGSEGV) with
+  *"Could not determine thread index for stack guard region"* — the main thread ran out of
+  stack. The crash report showed **1715 levels of recursion** alternating between
+  `AppKitWindowController.updateRootHost` → `AppGraph.graphDidChange` →
+  `GraphHost.flushTransactions` → `AppGraph.sceneList`, i.e. the SwiftUI scene list kept
+  rebuilding itself until the stack was exhausted (the fatal frame merely happened to be
+  inside opaque-type metadata resolution for `View.keyboardShortcut(_:)`).
+
+  Root cause: SwiftUI's `MenuBarExtra` scene. Measured over 8 fresh launches per variant:
+
+  | Menu bar implementation | Crashes |
+  |---|---|
+  | `MenuBarExtra` + custom `label:` closure | 3 / 8 |
+  | `MenuBarExtra` + single `Label` | 2 / 8 |
+  | `MenuBarExtra`, title passed as a parameter | 2 / 8 |
+  | `MenuBarExtra`, fully static title | 1 / 8 |
+  | no menu bar item | 0 / 8 |
+  | **AppKit `NSStatusItem` + `NSPopover`** | **0 / 8** |
+
+  The menu bar extra is now implemented in AppKit (`Sources/MenuBarController.swift`),
+  wired up through an `NSApplicationDelegateAdaptor` and a shared `CleanerModel` instance.
+  As a bonus this also makes the free-space number next to the icon, the warning icon when
+  below target, and a tooltip with the configured target possible.
+
+- Command menus moved into a dedicated `AppCommands: Commands` type.
+- Restored the system **New Window** item, so ⌘N reopens the main window after closing it.
+
+### Verified
+
+- 8/8 clean launches locally, 10/10 with the packaged universal build.
+- Menu bar icon with free-space text confirmed present via a menu-bar screenshot diff.
+
 ## [1.0.0-beta] — 2026-09-17
 
 First public release — **beta**. 🎉
