@@ -34,12 +34,12 @@ because the UI is Simplified-Chinese-only and the build is not yet notarized.
   file locations.
 - **Dedicated About window** (`DiskCleaner → About DiskCleaner`, or the button at the
   bottom of Settings): feature rundown, safety design, links to the repo and releases.
-- **Menu bar extra**: small icon in the menu bar showing the free space, with a popover
-  showing free space vs. target, whole-disk and memory usage, and quick actions
+- **Menu bar extra**: small icon in the menu bar with the free space next to it
+  (`21.8G`), turning into a warning triangle when below target. Clicking it opens a popover
+  with free space vs. target, whole-disk and memory usage, and quick actions
   (open main window / clean / quit). Toggle it in Settings → 菜单栏.
-  The icon becomes a warning triangle when below target.
-  > Note: the About window is declared as a `WindowGroup`, not a `Window` — on macOS,
-  > declaring any `Window` scene silently prevents `MenuBarExtra` from appearing.
+  Implemented with AppKit `NSStatusItem` + `NSPopover` — see the Fixed note below for why
+  SwiftUI's `MenuBarExtra` could not be used.
 - Version has a single source of truth (`Resources/Info.plist`) and is displayed as
   `1.0.0 (beta)`; a `BETA` badge is shown in the header.
 - Decimal units for storage (matching macOS) and binary units for memory (matching
@@ -47,11 +47,25 @@ because the UI is Simplified-Chinese-only and the build is not yet notarized.
 
 ### Fixed
 
-- **Crash on launch** (`EXC_BAD_ACCESS` / "Could not determine thread index for stack guard
-  region"): declaring the command menu inline in `App.body`'s `.commands { }` made this
-  toolchain emit a recursive opaque type for `View.keyboardShortcut(_:)`, and resolving the
-  type metadata at startup blew the stack. The menus now live in a dedicated
-  `AppCommands: Commands` type — same items, same shortcuts, no crash.
+- **Random crash on launch** (`EXC_BAD_ACCESS` / SIGSEGV with
+  "Could not determine thread index for stack guard region", i.e. a main-thread stack
+  overflow). Root cause: SwiftUI's `MenuBarExtra` scene. With this toolchain the compiler
+  emits a *recursive* opaque type descriptor for the scene, and resolving that type metadata
+  at startup recurses until the stack is exhausted.
+  Measured with 8 fresh launches each:
+
+  | Menu bar implementation | Crashes |
+  |---|---|
+  | `MenuBarExtra` + custom `label:` closure | 3 / 8 |
+  | `MenuBarExtra` with a single `Label` | 2 / 8 |
+  | `MenuBarExtra` title passed as a parameter | 2 / 8 |
+  | `MenuBarExtra`, fully static title | 1 / 8 |
+  | **no menu bar item** | **0 / 8** |
+  | **AppKit `NSStatusItem` + `NSPopover`** | **0 / 8** |
+
+  The menu bar extra is now an AppKit `NSStatusItem` (`Sources/MenuBarController.swift`),
+  which also makes the free-space number and the warning icon possible.
+  The command menus were additionally moved into a dedicated `AppCommands: Commands` type.
 
 **Engine (`scripts/diskautoclean.sh`)**
 

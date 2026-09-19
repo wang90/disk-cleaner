@@ -4,7 +4,6 @@ import AppKit
 /// 菜单栏小图标点开后弹出的面板：快速查看当前储存空间 / 内存使用量
 struct MenuBarPanel: View {
     @ObservedObject var model: CleanerModel
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -162,13 +161,9 @@ struct MenuBarPanel: View {
     }
 
     private func openMainWindow() {
-        openWindow(id: "main")
         NSApp.activate(ignoringOtherApps: true)
-        // 兜底：如果窗口没有被带到前台，直接找出来显示
-        DispatchQueue.main.async {
-            if let w = NSApp.windows.first(where: { $0.title == "磁盘清理" }) {
-                w.makeKeyAndOrderFront(nil)
-            }
+        if let w = NSApp.windows.first(where: { $0.title == "磁盘清理" }) {
+            w.makeKeyAndOrderFront(nil)
         }
     }
 }

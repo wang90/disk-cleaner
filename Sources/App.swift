@@ -2,7 +2,9 @@ import SwiftUI
 
 @main
 struct DiskCleanerApp: App {
-    @StateObject private var model = CleanerModel()
+    // 菜单栏图标由 AppKit 的 MenuBarController 负责（见该文件顶部注释）
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @StateObject private var model = CleanerModel.shared
     @Environment(\.openWindow) private var openWindow
 
     /// Dev/screenshot modes. Accepts either a launch argument or the env var
@@ -59,8 +61,6 @@ struct DiskCleanerApp: App {
         }
 
         // 独立的「关于」窗口（可同时开着主窗口）
-        // 注意：这里必须用 WindowGroup 而不是 Window —— 实测在 macOS 上
-        // 只要声明了 Window 场景，MenuBarExtra 就不会出现在菜单栏里。
         WindowGroup("关于 磁盘清理", id: "about") {
             AboutView(model: model)
                 .preferredColorScheme(model.theme.colorScheme)
@@ -68,20 +68,8 @@ struct DiskCleanerApp: App {
         .windowResizability(.contentSize)
         .defaultPosition(.center)
 
-        // 菜单栏常驻小图标：点击查看当前储存空间 / 内存使用量
-        // 用 isInserted 绑定控制显隐（SceneBuilder 不支持 if）
-        MenuBarExtra(isInserted: $model.showMenuBarExtra) {
-            MenuBarPanel(model: model)
-                .preferredColorScheme(model.theme.colorScheme)
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: model.menuBarSymbol)
-                if model.showMenuBarText {
-                    Text(model.freeSpaceShort)
-                }
-            }
-        }
-        .menuBarExtraStyle(.window)
+        // 菜单栏常驻小图标由 AppKit 的 MenuBarController 实现
+        // （SwiftUI 的 MenuBarExtra 在这套工具链上会随机启动崩溃，见该文件注释）
     }
 }
 
@@ -95,11 +83,15 @@ struct DiskCleanerApp: App {
 ///     栈顶反复出现 View.keyboardShortcut(_:)
 /// 抽成独立的 Commands 类型后即可正常，功能与快捷键完全不变。
 struct AppCommands: Commands {
-    @ObservedObject var model: CleanerModel
+    /// 故意用 `let` 而不是 `@ObservedObject`：菜单只要订阅了模型，
+    /// 模型一变化（启动时 bootstrap 会连续更新十几次）SwiftUI 就要重建整棵菜单，
+    /// 在本机这套工具链上会触发 _makeView 的无限递归 → 栈溢出崩溃。
+    /// 改成不订阅后菜单内容是静态的，菜单项照常工作。
+    let model: CleanerModel
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
-        CommandGroup(replacing: .newItem) { }
+        // 保留系统默认的「新建窗口」(⌘N)，这样用户关掉主窗口后还能再打开
 
         // 标准位置：「磁盘清理」菜单 →「关于 磁盘清理」
         CommandGroup(replacing: .appInfo) {
@@ -121,13 +113,12 @@ struct AppCommands: Commands {
 
             Divider()
 
-            Button(model.dryRun ? "模拟清理" : "开始清理") {
+            Button("开始清理") {
                 Task { await model.clean() }
             }
             .keyboardShortcut("k", modifiers: .command)
-            .disabled(model.isCleaning || model.scriptURL == nil)
 
-            Button(model.showLogs ? "隐藏日志" : "显示日志") {
+            Button("显示 / 隐藏日志") {
                 model.showLogs.toggle()
             }
             .keyboardShortcut("l", modifiers: .command)

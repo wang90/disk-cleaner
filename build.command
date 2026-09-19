@@ -42,7 +42,7 @@ say "Compiling Swift (macOS $DEPLOY, archs: $ARCHS_TO_BUILD) ..."
 for a in $ARCHS_TO_BUILD; do
   printf '    - %s ... ' "$a"
   if swiftc -parse-as-library -swift-version 5 \
-        -target "${a}-apple-macosx${DEPLOY}" -O \
+        -target "${a}-apple-macosx${DEPLOY}" ${OPT:--O} \
         -module-cache-path "$BUILD/modulecache" \
         -framework SwiftUI -framework AppKit \
         -o "$BUILD/DiskCleaner-$a" \

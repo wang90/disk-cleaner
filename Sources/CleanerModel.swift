@@ -4,6 +4,9 @@ import AppKit
 @MainActor
 final class CleanerModel: ObservableObject {
 
+    /// App 与菜单栏控制器共享同一个实例
+    static let shared = CleanerModel()
+
     // MARK: - 磁盘 / 内存状态
     @Published var freeKB: Int = 0
     @Published var diskTotalKB: Int = 0
@@ -505,6 +508,11 @@ final class CleanerModel: ObservableObject {
         if gb >= 1000 { return String(format: "%.1fT", gb / 1000) }
         if gb >= 100 { return String(format: "%.0fG", gb) }
         return String(format: "%.1fG", gb)
+    }
+
+    /// 菜单栏上显示的文字（关掉数字时给个短名）
+    var menuBarLabel: String {
+        showMenuBarText ? freeSpaceShort : "磁盘清理"
     }
 
     /// 菜单栏图标：低于目标时换成警告图标
