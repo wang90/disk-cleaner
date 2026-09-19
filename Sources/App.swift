@@ -55,46 +55,7 @@ struct DiskCleanerApp: App {
         }
         .defaultSize(width: windowWidth, height: windowHeight)
         .commands {
-            CommandGroup(replacing: .newItem) { }
-
-            // 标准位置：「磁盘清理」菜单 →「关于 磁盘清理」
-            CommandGroup(replacing: .appInfo) {
-                Button("关于 磁盘清理") {
-                    openWindow(id: "about")
-                }
-            }
-
-            CommandMenu("操作") {
-                Button("刷新状态") {
-                    Task { await model.refreshStatus() }
-                }
-                .keyboardShortcut("r", modifiers: .command)
-
-                Button("重新扫描") {
-                    Task { await model.scan() }
-                }
-                .keyboardShortcut("r", modifiers: [.command, .shift])
-
-                Divider()
-
-                Button(model.dryRun ? "模拟清理" : "开始清理") {
-                    Task { await model.clean() }
-                }
-                .keyboardShortcut("k", modifiers: .command)
-                .disabled(model.isCleaning || model.scriptURL == nil)
-
-                Button(model.showLogs ? "隐藏日志" : "显示日志") {
-                    model.showLogs.toggle()
-                }
-                .keyboardShortcut("l", modifiers: .command)
-
-                Divider()
-
-                Button("储存空间统计") {
-                    Task { await model.scanStorage() }
-                }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-            }
+            AppCommands(model: model)
         }
 
         // 独立的「关于」窗口（可同时开着主窗口）
@@ -121,5 +82,62 @@ struct DiskCleanerApp: App {
             }
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+/// 菜单命令单独放在一个 `Commands` 结构体里。
+///
+/// 踩过的坑：如果直接把这些 Button + `.keyboardShortcut(...)` 写在
+/// `App.body` 的 `.commands { }` 里，本机这套 Swift 工具链会为
+/// `View.keyboardShortcut(_:)` 生成**递归的不透明类型**，运行时解析类型元数据
+/// 时栈溢出崩溃：
+///     EXC_BAD_ACCESS / SIGSEGV "Could not determine thread index for stack guard region"
+///     栈顶反复出现 View.keyboardShortcut(_:)
+/// 抽成独立的 Commands 类型后即可正常，功能与快捷键完全不变。
+struct AppCommands: Commands {
+    @ObservedObject var model: CleanerModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) { }
+
+        // 标准位置：「磁盘清理」菜单 →「关于 磁盘清理」
+        CommandGroup(replacing: .appInfo) {
+            Button("关于 磁盘清理") {
+                openWindow(id: "about")
+            }
+        }
+
+        CommandMenu("操作") {
+            Button("刷新状态") {
+                Task { await model.refreshStatus() }
+            }
+            .keyboardShortcut("r", modifiers: .command)
+
+            Button("重新扫描") {
+                Task { await model.scan() }
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+
+            Divider()
+
+            Button(model.dryRun ? "模拟清理" : "开始清理") {
+                Task { await model.clean() }
+            }
+            .keyboardShortcut("k", modifiers: .command)
+            .disabled(model.isCleaning || model.scriptURL == nil)
+
+            Button(model.showLogs ? "隐藏日志" : "显示日志") {
+                model.showLogs.toggle()
+            }
+            .keyboardShortcut("l", modifiers: .command)
+
+            Divider()
+
+            Button("储存空间统计") {
+                Task { await model.scanStorage() }
+            }
+            .keyboardShortcut("s", modifiers: [.command, .shift])
+        }
     }
 }
