@@ -9,7 +9,7 @@ caches and logs in the background so your Mac never runs out of space.
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--beta.4-orange)](#download)
+[![Release](https://img.shields.io/badge/release-v1.0.0-brightgreen)](#download)
 
 > **Note:** the app UI is currently in **Simplified Chinese**.
 > English localization is on the [roadmap](#roadmap) — PRs are very welcome.
@@ -69,7 +69,7 @@ rundown, safety design and links to the repo and releases.
 
 ### Download
 
-Grab `DiskCleaner-v1.0.0-beta.4-macos-universal.zip` from
+Grab `DiskCleaner-v1.0.0-macos-universal.zip` from
 **[Releases](https://github.com/wang90/disk-cleaner/releases)** (marked *Pre-release*), unzip, and drag
 `DiskCleaner.app` into `/Applications`.
 

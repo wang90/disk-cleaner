@@ -5,6 +5,46 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] — 2026-09-20
+
+**First stable release.** 🎉 Everything from the beta series, plus the polish below.
+
+### Added
+
+- **Per-app data manager** — click ⚙︎ on any row of the app list to see the folders that app
+  keeps under `~/Library`, classified as `cache` / `log` / `userdata` / `unknown`.
+  Cache and log items are preselected; user data and unknown items are **locked** behind an
+  explicit "I understand the risk" switch plus a second confirmation, because deleting chat
+  histories or databases cannot be undone.
+- **Loading feedback while cleaning app data** — a translucent overlay with a spinner,
+  an `n / total` counter, a progress bar and the path currently being processed; rows,
+  refresh and delete are disabled while it runs.
+- **Menu bar extra** — a small icon showing the free space (e.g. `21.8G`), turning into a
+  warning triangle when below target. Click for a popover with free space, whole-disk and
+  memory usage, plus quick actions.
+- **Dedicated About window** (`DiskCleaner → About DiskCleaner`).
+- Settings with theme (follow system / light / dark), auto-clean and file locations.
+
+### Changed
+
+- The menu bar extra is implemented with AppKit `NSStatusItem` + `NSPopover` instead of
+  SwiftUI's `MenuBarExtra` (see the beta.2 entry below for the crash this fixed).
+- The `BETA` badge in the header is gone; the About window shows `版本 1.0.0`.
+
+### Fixed
+
+- Random crash on launch (`EXC_BAD_ACCESS` / "Could not determine thread index for stack
+  guard region") caused by SwiftUI's `MenuBarExtra` scene recursing ~1715 levels deep.
+- `roots[@]: unbound variable` when an app had no data directory (bash 3.2 + `set -u`).
+- The per-app detail sheet no longer reopens itself if you close it mid-clean.
+
+### Notes
+
+- Release builds are **ad-hoc signed, not notarized**, so the first launch needs
+  right-click → Open (or `xattr -dr com.apple.quarantine /Applications/DiskCleaner.app`).
+- The interface is currently **Simplified Chinese only**; English localization is the top
+  roadmap item.
+
 ## [1.0.0-beta.4] — 2026-09-20
 
 ### Added
