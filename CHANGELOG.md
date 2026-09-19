@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.4] — 2026-09-20
+
+### Added
+
+- **Loading feedback while cleaning app data.** Deleting the selected items in the per-app
+  data manager now shows:
+  - a translucent overlay with a spinner, an `n / total` counter, a progress bar and the
+    path currently being processed;
+  - a spinner inside the "删除选中项" button, plus `正在清理 n/total 项…` in the footer;
+  - rows, the refresh button and the delete button are disabled while it runs.
+
+  The engine now emits an `@@ITEM <path>` event *before* it starts measuring each item
+  (`du` can take a few seconds on large folders), so the UI can show what it is working on
+  rather than looking frozen.
+
 ## [1.0.0-beta.3] — 2026-09-20
 
 ### Added

@@ -14,7 +14,7 @@
 
 set -u
 
-VERSION="1.0.0-beta.3"
+VERSION="1.0.0-beta.4"
 
 # ------------------------------ 默认参数 -----------------------------------
 TARGET_FREE_KB=$((10 * 1000 * 1000 * 1000 / 1024))   # 目标：10 GB（十进制，跟 macOS 一致）
@@ -920,6 +920,8 @@ do_app_clean() {
       continue
     fi
     [ -e "$p" ] || continue
+    # 先告诉界面「开始处理这一项」，因为下面的 du 可能要花几秒
+    if [ "$MACHINE" -eq 1 ]; then printf '@@ITEM\t%s\n' "$p"; fi
     kb_of "$p"; sz=$KB_LAST_KB
     if rm -rf -- "$p" 2>/dev/null; then
       log "  [已删] $p  ($(human "$sz"))"

@@ -25,7 +25,13 @@ struct AppDetailView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let detail = model.appDetail {
-                content(detail)
+                ZStack {
+                    content(detail)
+                    if model.isCleaningAppData {
+                        cleaningOverlay
+                    }
+                }
+                .animation(.easeInOut(duration: 0.15), value: model.isCleaningAppData)
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "questionmark.folder")
@@ -229,7 +235,7 @@ struct AppDetailView: View {
             .fill(selected ? Color.accentColor.opacity(0.07) : Color.clear))
         .contentShape(Rectangle())
         .onTapGesture {
-            guard !locked else { return }
+            guard !locked, !model.isCleaningAppData else { return }
             if selected { model.detailSelection.remove(item.path) }
             else { model.detailSelection.insert(item.path) }
         }
@@ -240,12 +246,55 @@ struct AppDetailView: View {
         item.isSafe ? .green : (item.kind == "userdata" ? .orange : .gray)
     }
 
+    // MARK: 清理中的 loading 浮层
+    private var cleaningOverlay: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.large)
+
+            Text("正在清理…")
+                .font(.headline)
+
+            if model.appCleanTotal > 0 {
+                Text("\(model.appCleanDone) / \(model.appCleanTotal) 项")
+                    .font(.callout)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+
+                ProgressView(value: Double(model.appCleanDone),
+                             total: Double(max(1, model.appCleanTotal)))
+                    .frame(width: 230)
+            }
+
+            if !model.appCleanCurrent.isEmpty {
+                Text(model.appCleanCurrent)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(width: 340)
+            }
+
+            Text("删除过程中请不要关闭窗口")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(26)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.primary.opacity(0.08)))
+        .shadow(color: .black.opacity(0.18), radius: 14, y: 4)
+        .transition(.opacity)
+    }
+
     // MARK: 底部
     private var footer: some View {
         HStack(spacing: 12) {
             if model.isCleaningAppData {
                 ProgressView().controlSize(.small)
-                Text("正在清理…").font(.callout).foregroundStyle(.secondary)
+                Text("正在清理 \(model.appCleanDone)/\(model.appCleanTotal) 项…")
+                    .font(.callout)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
             } else {
                 Text("已选 \(model.detailSelection.count) 项")
                     .font(.callout).foregroundStyle(.secondary)
@@ -259,7 +308,14 @@ struct AppDetailView: View {
                 if model.detailHasRiskySelection { ui.confirmDelete = true }
                 else { Task { await model.cleanSelectedAppData() } }
             } label: {
-                Label("删除选中项", systemImage: "trash")
+                if model.isCleaningAppData {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("清理中…")
+                    }
+                } else {
+                    Label("删除选中项", systemImage: "trash")
+                }
             }
             .buttonStyle(.borderedProminent)
             .tint(model.detailHasRiskySelection ? .red : .accentColor)

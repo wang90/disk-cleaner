@@ -44,6 +44,10 @@ final class CleanerModel: ObservableObject {
     /// 是否允许勾选「用户数据 / 未知」项（默认关闭，必须由用户显式打开）
     @Published var allowRiskyDeletion = false
     @Published var isCleaningAppData = false
+    /// 应用数据清理进度
+    @Published var appCleanTotal = 0
+    @Published var appCleanDone = 0
+    @Published var appCleanCurrent = ""
 
     // MARK: - 清理进度
     @Published var logs: [LogEntry] = []
@@ -291,6 +295,9 @@ final class CleanerModel: ObservableObject {
 
         isCleaningAppData = true
         freedKB = 0
+        appCleanTotal = paths.count
+        appCleanDone = 0
+        appCleanCurrent = ""
         appendLog("=== 清理「\(detail.name)」的数据：\(paths.count) 项 ===", .info)
 
         var args = ["--machine", "--app-clean"]
@@ -304,7 +311,8 @@ final class CleanerModel: ObservableObject {
         banner = "已清理「\(detail.name)」\(Fmt.size(freedKB))"
         await refreshStatus()
         await scanApps()
-        if let app = detailApp { await loadAppDetail(app) }   // 刷新明细
+        // 只有界面还开着才刷新明细（用户可能在清理过程中关掉了窗口）
+        if detailApp != nil, let app = detailApp { await loadAppDetail(app) }
     }
 
     func closeAppDetail() {
@@ -365,7 +373,17 @@ final class CleanerModel: ObservableObject {
                     freedKB += kb
                     let path = Fmt.tilde(parts[2])
                     appendLog("  ✓ \(path)  \(Fmt.size(kb))", .ok)
-                    if neededKB > 0 { progress = min(1, Double(freedKB) / Double(neededKB)) }
+                    if isCleaningAppData {
+                        appCleanDone += 1
+                        appCleanCurrent = path
+                    } else if neededKB > 0 {
+                        progress = min(1, Double(freedKB) / Double(neededKB))
+                    }
+                }
+            case "ITEM":
+                // 应用数据清理：开始处理某一项（du 可能较慢，先让界面显示出来）
+                if parts.count > 1 {
+                    appCleanCurrent = Fmt.tilde(parts[1])
                 }
             case "DONE":
                 if parts.count > 2 {

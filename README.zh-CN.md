@@ -50,7 +50,7 @@ DiskCleaner 会告诉你磁盘空间到底去哪了（整盘 + macOS「储存空
 
 ### 直接下载
 
-到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 下载 `DiskCleaner-v1.0.0-beta.3-macos-universal.zip`
+到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 下载 `DiskCleaner-v1.0.0-beta.4-macos-universal.zip`
 （标记为 *Pre-release*，即测试版），解压后把 `DiskCleaner.app` 拖进「应用程序」。
 
 发布包是 **ad-hoc 签名**（未公证），首次打开会提示
