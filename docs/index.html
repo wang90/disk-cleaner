@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiskCleaner — a native macOS storage cleaner that keeps 10 GB free</title>
+<meta name="description" content="Native macOS storage cleaner with a GUI. See where your disk space went, list per-app usage, and keep at least 10 GB free automatically. SwiftUI + shell, no dependencies.">
+<meta property="og:title" content="DiskCleaner — native macOS storage cleaner">
+<meta property="og:description" content="See where your disk space went, and keep at least 10 GB free automatically.">
+<meta property="og:image" content="images/main-window.png">
+<link rel="icon" href="images/icon-64.png">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f5f6f8;
+    --card: #ffffff;
+    --text: #16181d;
+    --muted: #6a7181;
+    --line: #e6e8ee;
+    --accent: #2f6bff;
+    --accent-2: #14b8a6;
+    --green: #16a34a;
+    --orange: #ea8a00;
+    --radius: 14px;
+    --shadow: 0 1px 3px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1014;
+      --bg-soft: #14171d;
+      --card: #171b22;
+      --text: #e9ecf1;
+      --muted: #9aa3b2;
+      --line: #262b34;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 22px; }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: saturate(180%) blur(14px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; align-items: center; gap: 14px; height: 58px; }
+  nav img { width: 26px; height: 26px; border-radius: 7px; }
+  nav .brand { font-weight: 650; letter-spacing: -.01em; }
+  nav .spacer { flex: 1; }
+  nav a.link { color: var(--muted); font-size: 14px; }
+  nav a.link:hover { color: var(--text); text-decoration: none; }
+  #lang {
+    font: inherit; font-size: 13px; color: var(--text);
+    background: var(--bg-soft); border: 1px solid var(--line);
+    padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  }
+  #lang:hover { border-color: var(--accent); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 68px 0 46px; text-align: center; }
+  .hero .icon { width: 92px; height: 92px; border-radius: 22px; box-shadow: var(--shadow); }
+  h1 { font-size: clamp(28px, 4.6vw, 46px); line-height: 1.15; letter-spacing: -.02em; margin: 22px 0 14px; }
+  .hero p.sub { color: var(--muted); font-size: clamp(15px, 2vw, 18px); max-width: 620px; margin: 0 auto; }
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+  .badge {
+    font-size: 12px; color: var(--muted); border: 1px solid var(--line);
+    background: var(--bg-soft); padding: 3px 10px; border-radius: 999px;
+  }
+  .badge b { color: var(--text); font-weight: 600; }
+
+  /* ---------- downloads ---------- */
+  .dl { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 30px 0 10px; }
+  .btn {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    min-width: 232px; padding: 14px 20px; border-radius: var(--radius);
+    background: var(--card); border: 1px solid var(--line);
+    color: var(--text); text-align: left; box-shadow: var(--shadow);
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); border-color: var(--accent); }
+  .btn .k { font-weight: 650; font-size: 15px; }
+  .btn .v { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: none; color: #fff; }
+  .btn.primary .v { color: rgba(255,255,255,.85); }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 12px; }
+  .hint code { background: var(--bg-soft); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; }
+
+  /* ---------- sections ---------- */
+  section { padding: 52px 0; }
+  section.soft { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  h2 { font-size: clamp(21px, 3vw, 27px); letter-spacing: -.015em; margin: 0 0 8px; }
+  .lead { color: var(--muted); margin: 0 0 26px; }
+
+  .shots { display: grid; grid-template-columns: 1.25fr 1fr; gap: 18px; align-items: start; }
+  .shots img { width: 100%; border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .shots figure { margin: 0; }
+  .shots figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; text-align: center; }
+  @media (max-width: 780px) { .shots { grid-template-columns: 1fr; } }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 10px 0 6px; font-size: 15.5px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card .emoji { font-size: 21px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  th, td { padding: 11px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--line); }
+  th { background: var(--bg-soft); font-size: 13px; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td.tag { font-weight: 600; white-space: nowrap; }
+
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  ol.steps li { position: relative; padding-left: 42px; color: var(--muted); }
+  ol.steps li::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: 0; top: 1px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 700; display: grid; place-items: center;
+  }
+  ol.steps b { color: var(--text); }
+  pre {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; overflow-x: auto; font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .note {
+    border-left: 3px solid var(--orange); background: rgba(234,138,0,.08);
+    padding: 12px 16px; border-radius: 8px; color: var(--muted); font-size: 14px;
+  }
+  footer { border-top: 1px solid var(--line); padding: 30px 0 46px; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  [data-lang] { display: none; }
+  html[lang="en"] [data-lang="en"], html[lang="zh"] [data-lang="zh"] { display: initial; }
+  html[lang="en"] div[data-lang="en"], html[lang="zh"] div[data-lang="zh"],
+  html[lang="en"] p[data-lang="en"], html[lang="zh"] p[data-lang="zh"],
+  html[lang="en"] li[data-lang="en"], html[lang="zh"] li[data-lang="zh"],
+  html[lang="en"] td[data-lang="en"], html[lang="zh"] td[data-lang="zh"],
+  html[lang="en"] h2[data-lang="en"], html[lang="zh"] h2[data-lang="zh"],
+  html[lang="en"] h3[data-lang="en"], html[lang="zh"] h3[data-lang="zh"] { display: block; }
+  html[lang="en"] span[data-lang="en"], html[lang="zh"] span[data-lang="zh"] { display: inline; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <img src="images/icon-64.png" alt="DiskCleaner">
+    <span class="brand">DiskCleaner</span>
+    <span class="spacer"></span>
+    <a class="link" href="#features" data-lang="en">Features</a>
+    <a class="link" href="#features" data-lang="zh">功能</a>
+    <a class="link" href="#install" data-lang="en">Install</a>
+    <a class="link" href="#install" data-lang="zh">安装</a>
+    <a class="link" href="https://github.com/wang90/disk-cleaner">GitHub</a>
+    <button id="lang" title="Switch language">中文</button>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <img class="icon" src="images/icon-256.png" alt="DiskCleaner icon">
+  <h1>
+    <span data-lang="en">Keep at least 10&nbsp;GB free.<br>Automatically.</span>
+    <span data-lang="zh">自动保持至少 10&nbsp;GB 可用空间</span>
+  </h1>
+  <p class="sub" data-lang="en">
+    A native macOS storage cleaner with a GUI. See exactly where your disk space went,
+    check what every app is using, and let it quietly clean rebuildable caches and logs —
+    stopping the moment your target is met.
+  </p>
+  <p class="sub" data-lang="zh">
+    原生 macOS 储存空间清理工具，带图形界面。看清空间到底去哪了、每个应用占用了多少，
+    然后让它在后台安静地清理可重建的缓存与日志 —— 达到目标就立刻停止。
+  </p>
+
+  <div class="badges">
+    <span class="badge" data-lang="en">macOS 14+</span>
+    <span class="badge" data-lang="zh">macOS 14+</span>
+    <span class="badge" data-lang="en">SwiftUI + shell · <b>no dependencies</b></span>
+    <span class="badge" data-lang="zh">SwiftUI + shell · <b>零依赖</b></span>
+    <span class="badge">MIT</span>
+    <span class="badge"><span data-lang="en">latest</span><span data-lang="zh">最新版</span> <b id="ver">…</b></span>
+  </div>
+
+  <div class="dl">
+    <a class="btn primary" id="dl-arm"
+       href="https://github.com/wang90/disk-cleaner/releases/latest">
+      <span class="k">Apple Silicon</span>
+      <span class="v" id="dl-arm-v">arm64 · .zip</span>
+    </a>
+    <a class="btn" id="dl-intel"
+       href="https://github.com/wang90/disk-cleaner/releases/latest">
+      <span class="k">Intel</span>
+      <span class="v" id="dl-intel-v">x86_64 · .zip</span>
+    </a>
+    <a class="btn" href="https://github.com/wang90/disk-cleaner/releases">
+      <span class="k" data-lang="en">All downloads</span>
+      <span class="k" data-lang="zh">全部下载</span>
+      <span class="v" data-lang="en">releases + SHA-256</span>
+      <span class="v" data-lang="zh">发布页 + SHA-256 校验</span>
+    </a>
+  </div>
+
+  <p class="hint">
+    <span data-lang="en">Not sure which you have? Run <code>uname -m</code> — <code>arm64</code> is Apple Silicon, <code>x86_64</code> is Intel.</span>
+    <span data-lang="zh">不确定是哪种？终端执行 <code>uname -m</code> —— <code>arm64</code> 是 Apple 芯片，<code>x86_64</code> 是 Intel。</span>
+  </p>
+</header>
+
+<section class="soft">
+  <div class="wrap">
+    <h2 data-lang="en">Screenshots</h2>
+    <h2 data-lang="zh">界面预览</h2>
+    <p class="lead" data-lang="en">Everything in one window — and a per-app data manager when you want to dig in.</p>
+    <p class="lead" data-lang="zh">所有信息都在一个窗口里，想深挖时还有按应用的数据管理器。</p>
+    <div class="shots">
+      <figure>
+        <img src="images/main-window.png" alt="DiskCleaner main window">
+        <figcaption data-lang="en">Free space, disk &amp; memory, macOS-style storage breakdown</figcaption>
+        <figcaption data-lang="zh">可用空间、硬盘与内存、macOS 风格储存空间分类</figcaption>
+      </figure>
+      <figure>
+        <img src="images/settings.png" alt="DiskCleaner settings">
+        <figcaption data-lang="en">Settings — theme, menu bar, update check</figcaption>
+        <figcaption data-lang="zh">设置 —— 主题、菜单栏、更新检查</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2 data-lang="en">Features</h2>
+    <h2 data-lang="zh">功能</h2>
+    <p class="lead" data-lang="en">Built to run unattended, so deletion is deliberately boring.</p>
+    <p class="lead" data-lang="zh">为无人值守而设计，所以删除逻辑刻意做得"无聊"。</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="emoji">🛟</div>
+        <h3 data-lang="en">Never run out of space</h3>
+        <h3 data-lang="zh">不再爆盘</h3>
+        <p data-lang="en">Checks hourly and cleans only when free space drops below your target (10 GB by default) — then stops the instant it is met.</p>
+        <p data-lang="zh">每小时检查一次，只有低于目标（默认 10 GB）才清理，达到目标立刻停止，绝不"过度清理"。</p>
+      </div>
+
+      <div class="card">
+        <div class="emoji">🍩</div>
+        <h3 data-lang="en">macOS-style storage view</h3>
+        <h3 data-lang="zh">macOS 风格储存空间</h3>
+        <p data-lang="en">A colour stacked bar for Applications, Documents, Photos, Developer caches, System data… Hover a segment for the exact size.</p>
+        <p data-lang="zh">彩色堆叠条展示应用程序、文稿、照片、开发者缓存、系统数据等分类；鼠标划入色块看精确大小。</p>
+      </div>
+
+      <div class="card">
+        <div class="emoji">📦</div>
+        <h3 data-lang="en">Per-app usage</h3>
+        <h3 data-lang="zh">每个应用的占用</h3>
+        <p data-lang="en">Every app's bundle size plus its user data under <code>~/Library</code>, sorted by size.</p>
+        <p data-lang="zh">每个 App 的本体大小，加上它在 <code>~/Library</code> 下的用户数据，按大小排序。</p>
+      </div>
+
+      <div class="card">
+        <div class="emoji">🧹</div>
+        <h3 data-lang="en">Per-app data manager</h3>
+        <h3 data-lang="zh">应用数据管理</h3>
+        <p data-lang="en">Pick exactly what to delete. Caches and logs are preselected; chat records, databases and login state stay <b>locked</b> until you explicitly unlock them.</p>
+        <p data-lang="zh">自己挑要删什么。缓存和日志默认勾选；聊天记录、数据库、登录状态**默认锁住**，必须手动解锁并二次确认。</p>
+      </div>
+
+      <div class="card">
+        <div class="emoji">🧭</div>
+        <h3 data-lang="en">Menu bar extra</h3>
+        <h3 data-lang="zh">菜单栏小图标</h3>
+        <p data-lang="en">Free space next to the icon, a warning triangle when you drop below target, and a popover with disk, memory and quick actions.</p>
+        <p data-lang="zh">图标旁显示可用空间，低于目标变 ⚠️，点击弹出磁盘、内存面板与快捷操作。</p>
+      </div>
+
+      <div class="card">
+        <div class="emoji">🔒</div>
+        <h3 data-lang="en">Private by design</h3>
+        <h3 data-lang="zh">纯本地</h3>
+        <p data-lang="en">No telemetry, nothing uploaded. The only network request is the optional update check — turn it off and the app never opens a socket.</p>
+        <p data-lang="zh">没有遥测、不上传任何数据。唯一的联网行为是可关闭的更新检查 —— 关掉后应用完全不碰网络。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="soft">
+  <div class="wrap">
+    <h2 data-lang="en">How cleaning works</h2>
+    <h2 data-lang="zh">清理逻辑</h2>
+    <p class="lead" data-lang="en">Three tiers, from safest to most aggressive. Tier 3 never runs unless you ask for it.</p>
+    <p class="lead" data-lang="zh">三个等级，从最安全到最激进。第 3 级不主动开启就永远不会执行。</p>
+    <table>
+      <thead>
+        <tr>
+          <th data-lang="en">Tier</th><th data-lang="zh">等级</th>
+          <th data-lang="en">What it removes</th><th data-lang="zh">清理内容</th>
+          <th data-lang="en">Default</th><th data-lang="zh">默认</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tag">1</td>
+          <td data-lang="en">Caches &amp; logs, Xcode DerivedData, crash reports, huge log files (truncated, not deleted)</td>
+          <td data-lang="zh">缓存与日志、Xcode DerivedData、崩溃报告、超大日志（清空而非删除）</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td class="tag">2</td>
+          <td data-lang="en">npm / pnpm / pip / Homebrew / Go / Cargo / Gradle and other rebuildable developer caches</td>
+          <td data-lang="zh">npm / pnpm / pip / Homebrew / Go / Cargo / Gradle 等可重建的开发缓存</td>
+          <td>✅</td>
+        </tr>
+        <tr>
+          <td class="tag">3</td>
+          <td data-lang="en">Xcode archives, iOS backups, Trash, old downloads — <b>your personal data</b></td>
+          <td data-lang="zh">Xcode 归档、iOS 备份、废纸篓、旧下载 —— <b>你的个人数据</b></td>
+          <td data-lang="en">report only</td>
+          <td data-lang="zh">只报告</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note" style="margin-top:22px">
+      <span data-lang="en"><b>Safety:</b> every target is on a whitelist and must live inside your home folder; <code>~/Documents</code>, <code>~/Desktop</code>, <code>~/.ssh</code>, <code>~/Library/Keychains</code> … are refused outright. Deletion is age-based, filenames are handled NUL-safely, every <code>du</code> has a hard timeout, and the whole run is logged to <code>~/Library/Logs/diskautoclean.log</code>.</span>
+      <span data-lang="zh"><b>安全：</b>所有清理目标都在白名单里且必须位于你的主目录内；<code>~/Documents</code>、<code>~/Desktop</code>、<code>~/.ssh</code>、<code>~/Library/Keychains</code> 等路径直接拒绝。按时间删除、文件名 NUL 安全处理、每个 <code>du</code> 都有硬超时，全过程记录到 <code>~/Library/Logs/diskautoclean.log</code>。</span>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2 data-lang="en">Install</h2>
+    <h2 data-lang="zh">安装</h2>
+    <ol class="steps">
+      <li>
+        <b data-lang="en">Check your chip</b><b data-lang="zh">确认芯片</b><br>
+        <span data-lang="en">Run <code>uname -m</code> → <code>arm64</code> (Apple Silicon) or <code>x86_64</code> (Intel).</span>
+        <span data-lang="zh">执行 <code>uname -m</code> → <code>arm64</code>（Apple 芯片）或 <code>x86_64</code>（Intel）。</span>
+      </li>
+      <li>
+        <b data-lang="en">Download &amp; unzip</b><b data-lang="zh">下载并解压</b><br>
+        <span data-lang="en">Grab the matching .zip above, then drag <code>DiskCleaner.app</code> into <code>/Applications</code>.</span>
+        <span data-lang="zh">下载上面匹配的 .zip，把 <code>DiskCleaner.app</code> 拖进 <code>/Applications</code>。</span>
+      </li>
+      <li>
+        <b data-lang="en">First launch</b><b data-lang="zh">首次打开</b><br>
+        <span data-lang="en">The build is ad-hoc signed (not notarized), so macOS will warn you. Right-click → <b>Open</b>, then <b>Open</b> again — or run the command below.</span>
+        <span data-lang="zh">发布包是 ad-hoc 签名（未公证），系统会提示。请 <b>右键 → 打开</b>，再点一次「打开」；或执行下面的命令。</span>
+      </li>
+    </ol>
+    <pre style="margin-top:18px">xattr -dr com.apple.quarantine /Applications/DiskCleaner.app
+open /Applications/DiskCleaner.app</pre>
+
+    <p class="lead" style="margin-top:26px" data-lang="en">Prefer to build it yourself? Only the Command Line Tools are needed.</p>
+    <p class="lead" style="margin-top:26px" data-lang="zh">想自己编译？只需要 Command Line Tools。</p>
+    <pre>git clone https://github.com/wang90/disk-cleaner.git
+cd disk-cleaner
+./build.command          # builds DiskCleaner.app and opens it</pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <img src="images/icon-64.png" style="width:22px;height:22px;border-radius:6px" alt="">
+    <span>DiskCleaner · MIT License</span>
+    <span class="spacer" style="flex:1"></span>
+    <a href="https://github.com/wang90/disk-cleaner">GitHub</a>
+    <a href="https://github.com/wang90/disk-cleaner/releases">Releases</a>
+    <a href="https://github.com/wang90/disk-cleaner/blob/main/CHANGELOG.md">Changelog</a>
+    <a href="https://github.com/wang90/disk-cleaner/issues">Issues</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var html = document.documentElement;
+  var btn = document.getElementById('lang');
+
+  function setLang(lang) {
+    html.lang = lang;
+    btn.textContent = lang === 'zh' ? 'English' : '中文';
+    try { localStorage.setItem('dc-lang', lang); } catch (e) {}
+  }
+
+  var saved = null;
+  try { saved = localStorage.getItem('dc-lang'); } catch (e) {}
+  var initial = saved || ((navigator.language || '').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en');
+  setLang(initial);
+  btn.addEventListener('click', function () { setLang(html.lang === 'zh' ? 'en' : 'zh'); });
+
+  // 从 GitHub API 取最新版本，把两个下载按钮指向真正的资产
+  var REPO = 'wang90/disk-cleaner';
+  fetch('https://api.github.com/repos/' + REPO + '/releases/latest', {
+    headers: { 'Accept': 'application/vnd.github+json' }
+  }).then(function (r) { return r.json(); }).then(function (rel) {
+    if (!rel || !rel.assets) return;
+    document.getElementById('ver').textContent = (rel.tag_name || '').replace(/^v/, '');
+    var byName = {};
+    rel.assets.forEach(function (a) { byName[a.name] = a; });
+    function pick(suffix) {
+      for (var i = 0; i < rel.assets.length; i++) {
+        if (rel.assets[i].name.indexOf(suffix) !== -1) return rel.assets[i];
+      }
+      return null;
+    }
+    function wire(id, labelId, suffix) {
+      var a = pick(suffix);
+      if (!a) return;
+      var el = document.getElementById(id);
+      el.href = a.browser_download_url;
+      var kb = Math.round(a.size / 1024);
+      document.getElementById(labelId).textContent = suffix.replace('-', '') + ' · ' + kb + ' KB';
+    }
+    wire('dl-arm', 'dl-arm-v', 'arm64.zip');
+    wire('dl-intel', 'dl-intel-v', 'x86_64.zip');
+  }).catch(function () { /* 离线时保留指向 releases 页面的链接 */ });
+})();
+</script>
+</body>
+</html>
