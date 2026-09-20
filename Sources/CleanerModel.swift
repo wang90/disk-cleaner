@@ -72,6 +72,13 @@ final class CleanerModel: ObservableObject {
     @Published var showMenuBarExtra: Bool = true { didSet { save() } }
     /// 菜单栏图标旁是否显示可用空间数字
     @Published var showMenuBarText: Bool = true { didSet { save() } }
+    /// 自动检查更新（App 里唯一联网的地方，可关闭）
+    @Published var autoCheckUpdates: Bool = true { didSet { save() } }
+    /// 更新检查结果
+    @Published var updateState: UpdateState = .idle
+    @Published var lastUpdateCheck: Date?
+    /// 上次查到的最新版本号（持久化，便于离线时显示）
+    @Published var lastKnownLatest: String = ""
 
     // MARK: - 自动清理
     @Published var autoCleanInstalled = false
@@ -128,6 +135,18 @@ final class CleanerModel: ObservableObject {
         // Dev/screenshot helpers: `--settings` opens the settings sheet on launch,
         // `--demo` also pre-loads the storage breakdown and shows bar labels.
         let mode = DiskCleanerApp.uiMode
+
+        // 启动时立刻检查更新（放在扫描之前，与它们并行，不阻塞界面），之后每 12 小时一次
+        if autoCheckUpdates {
+            Task { [weak self] in
+                await self?.checkForUpdates()
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 12 * 60 * 60 * 1_000_000_000)
+                    guard let self, self.autoCheckUpdates else { break }
+                    await self.checkForUpdates()
+                }
+            }
+        }
 
         await refreshStatus()
         if scriptURL != nil {
@@ -579,6 +598,9 @@ final class CleanerModel: ObservableObject {
         d.set(theme.rawValue, forKey: "theme")
         d.set(showMenuBarExtra, forKey: "showMenuBarExtra")
         d.set(showMenuBarText, forKey: "showMenuBarText")
+        d.set(autoCheckUpdates, forKey: "autoCheckUpdates")
+        d.set(lastKnownLatest, forKey: "lastKnownLatest")
+        if let t = lastUpdateCheck { d.set(t.timeIntervalSince1970, forKey: "lastUpdateCheck") }
     }
 
     private func load() {
@@ -593,7 +615,58 @@ final class CleanerModel: ObservableObject {
         if let raw = d.string(forKey: "theme"), let t = AppTheme(rawValue: raw) { theme = t }
         if d.object(forKey: "showMenuBarExtra") != nil { showMenuBarExtra = d.bool(forKey: "showMenuBarExtra") }
         if d.object(forKey: "showMenuBarText") != nil { showMenuBarText = d.bool(forKey: "showMenuBarText") }
+        if d.object(forKey: "autoCheckUpdates") != nil { autoCheckUpdates = d.bool(forKey: "autoCheckUpdates") }
+        if let v = d.string(forKey: "lastKnownLatest") { lastKnownLatest = v }
+        if d.object(forKey: "lastUpdateCheck") != nil {
+            let t = d.double(forKey: "lastUpdateCheck")
+            if t > 0 { lastUpdateCheck = Date(timeIntervalSince1970: t) }
+        }
     }
+
+    // MARK: - 检查更新（App 里唯一的联网请求，可在设置里关闭）
+    /// 手动或自动检查最新版本
+    func checkForUpdates(manual: Bool = false) async {
+        if !autoCheckUpdates && !manual { return }
+        if case .checking = updateState { return }
+
+        updateState = .checking
+        if manual { appendLog("正在检查更新…", .info) }
+
+        do {
+            let release = try await UpdateChecker.latestRelease()
+            lastUpdateCheck = Date()
+            lastKnownLatest = release.version
+            save()
+            let current = AppInfo.shortVersion
+
+            if release.draft == true {
+                updateState = .upToDate(current: current)
+            } else if AppVersion.isNewer(release.version, than: current) {
+                updateState = .available(latest: release.version,
+                                         url: release.htmlURL,
+                                         notes: release.body)
+                appendLog("发现新版本 \(release.version)（当前 \(current)）", .ok)
+            } else {
+                updateState = .upToDate(current: current)
+                if manual { appendLog("已是最新版本 \(current)", .ok) }
+            }
+        } catch {
+            updateState = .failed(error.localizedDescription)
+            if manual { appendLog("检查更新失败：\(error.localizedDescription)", .warn) }
+        }
+    }
+
+    /// 打开某个版本的下载页
+    func openRelease(_ urlString: String) {
+        if let url = URL(string: urlString) { NSWorkspace.shared.open(url) }
+    }
+
+    /// 打开本项目的 GitHub 页面
+    func openRepo() {
+        if let url = URL(string: AppInfo.repoURL) { NSWorkspace.shared.open(url) }
+    }
+
+    var currentVersionText: String { AppInfo.displayVersion }
 
     // MARK: - 菜单栏显示
     /// 菜单栏里的紧凑数字，例如 "21.8G" / "1.2T"

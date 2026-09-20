@@ -42,12 +42,34 @@ struct AboutView: View {
                 }
             }
 
-            Text("版本 \(AppInfo.displayVersion)")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
+            HStack(spacing: 6) {
+                Text("版本 \(AppInfo.displayVersion)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
 
-            Text("原生 SwiftUI · 纯本地运行 · 不联网、不上传任何数据")
+                if case .available(let latest, let url, _) = model.updateState {
+                    Button {
+                        model.openRelease(url)
+                    } label: {
+                        Text("有新版本 \(latest)")
+                            .font(.system(size: 10, weight: .semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Capsule().fill(Color.green.opacity(0.16)))
+                            .foregroundStyle(Color.green)
+                    }
+                    .buttonStyle(.plain)
+                    .help("点击前往下载")
+                } else if case .upToDate = model.updateState {
+                    Text("已是最新")
+                        .font(.system(size: 10, weight: .semibold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Capsule().fill(Color.secondary.opacity(0.14)))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text("原生 SwiftUI · 纯本地运行、不上传任何数据")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -127,6 +149,14 @@ struct AboutView: View {
             } label: {
                 Label("下载最新版", systemImage: "arrow.down.circle")
             }
+
+            // 系统原生分享面板（邮件 / 信息 / AirDrop / 拷贝链接 …）
+            ShareLink(item: URL(string: AppInfo.repoURL)!,
+                      subject: Text("DiskCleaner"),
+                      message: Text("原生 macOS 储存空间清理工具，自动保持至少 10GB 可用空间")) {
+                Label("分享", systemImage: "square.and.arrow.up")
+            }
+            .help("分享 GitHub 链接")
 
             Spacer()
 

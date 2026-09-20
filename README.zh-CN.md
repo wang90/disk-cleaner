@@ -41,8 +41,10 @@ DiskCleaner 会告诉你磁盘空间到底去哪了（整盘 + macOS「储存空
 - **三级清理** —— 安全缓存 → 开发缓存 → 用户数据（默认只报告）。
 - **零依赖** —— 纯 SwiftUI + 一个 shell 脚本，不需要 Homebrew / Python，
   只用系统自带的 Command Line Tools 即可编译。
-- **纯本地** —— 不联网、不上传任何数据。
-- **通用二进制** —— Apple Silicon 与 Intel 都能跑。
+- **纯本地** —— 没有遥测、没有统计上报，任何关于你 Mac 的信息都不会被上传。
+  整个应用唯一的联网行为是**可关闭的更新检查**（见 [更新](#更新)），
+  关掉它应用就完全不碰网络。
+- **分架构构建** —— Apple 芯片（arm64）与 Intel（x86_64）各一个包。
 
 ---
 
@@ -54,8 +56,8 @@ DiskCleaner 会告诉你磁盘空间到底去哪了（整盘 + macOS「储存空
 
 | 你的 Mac | 下载 |
 |---|---|
-| **Apple 芯片**（M1 / M2 / M3 / M4 …） | `DiskCleaner-v1.0.0-macos-arm64.zip` |
-| **Intel 芯片** | `DiskCleaner-v1.0.0-macos-x86_64.zip` |
+| **Apple 芯片**（M1 / M2 / M3 / M4 …） | `DiskCleaner-v1.1.0-macos-arm64.zip` |
+| **Intel 芯片** | `DiskCleaner-v1.1.0-macos-x86_64.zip` |
 
 不确定是哪种？点左上角  → **关于本机**：芯片写着 *Apple M…* 就选 **arm64**，
 写着 *Intel* 就选 **x86_64**。或者在终端执行：
@@ -210,6 +212,30 @@ xcode-select --install
 - 真正的删除由 `diskautoclean.sh --app-clean <路径>…` 执行，它会再次校验每个路径
   都在 `$HOME` 内且不在受保护列表里——所以即使界面有 bug，也删不掉
   `~/Documents`、`~/Library/Keychains` 这类东西。
+
+## 更新
+
+DiskCleaner 会在有新版本时提示你。
+
+- **自动检查**：启动时一次，之后每 12 小时一次（默认开启）。
+- **手动检查**：设置 → 更新 →「检查更新」。
+- 同一处以及 **磁盘清理 → 关于 磁盘清理** 里都会显示**当前版本**。
+- 发现新版本时，主界面表头和关于窗口会出现绿色 **有新版本 x.y.z** 胶囊，点击即可前往下载页。
+
+**更新检查到底做了什么**
+
+它只发一个请求：
+`GET https://api.github.com/repos/wang90/disk-cleaner/releases/latest`，
+带上 `User-Agent: DiskCleaner/<版本号>` —— 和你用浏览器打开 Releases 页面是同一个请求。
+只读取版本号和发布页地址，**不发送任何**关于你 Mac、磁盘、文件或使用情况的信息，
+也没有任何统计、埋点。
+
+完全不想联网？关掉 设置 → 更新 →「自动检查更新」，应用就再也不会碰网络。
+
+## 分享
+
+- 表头（和关于窗口）有**分享**按钮，会弹出 macOS 原生分享面板，分享本项目的 GitHub 链接 ——
+  可以发到「邮件」「信息」、AirDrop、备忘录，或者直接「拷贝链接」。
 
 ## 安全设计
 

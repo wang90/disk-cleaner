@@ -9,7 +9,7 @@ caches and logs in the background so your Mac never runs out of space.
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0-brightgreen)](#download)
+[![Release](https://img.shields.io/badge/release-v1.1.0-brightgreen)](#download)
 
 > **Note:** the app UI is currently in **Simplified Chinese**.
 > English localization is on the [roadmap](#roadmap) — PRs are very welcome.
@@ -60,8 +60,10 @@ rundown, safety design and links to the repo and releases.
 - **Three safety tiers** — safe caches → developer caches → user data (opt-in only).
 - **No dependencies** — pure SwiftUI + a POSIX shell script. No Homebrew, no Python.
   Runs on the built-in Command Line Tools.
-- **Private by design** — nothing is uploaded anywhere. No network access at all.
-- **Universal binary** — Apple Silicon + Intel.
+- **Private by design** — no telemetry, no analytics, nothing about your Mac is ever
+  uploaded. The *only* network request in the whole app is the optional update check
+  (see [Updates](#updates)); switch it off and the app never opens a socket.
+- **Separate builds** — Apple Silicon (arm64) and Intel (x86_64).
 
 ---
 
@@ -73,8 +75,8 @@ Pick the build for your Mac from **[Releases](https://github.com/wang90/disk-cle
 
 | Your Mac | Download |
 |---|---|
-| **Apple Silicon** (M1 / M2 / M3 / M4 …) | `DiskCleaner-v1.0.0-macos-arm64.zip` |
-| **Intel** | `DiskCleaner-v1.0.0-macos-x86_64.zip` |
+| **Apple Silicon** (M1 / M2 / M3 / M4 …) | `DiskCleaner-v1.1.0-macos-arm64.zip` |
+| **Intel** | `DiskCleaner-v1.1.0-macos-x86_64.zip` |
 
 Not sure which you have? Apple menu → **About This Mac**: if the chip line says *Apple M…*
 pick **arm64**; if it says *Intel* pick **x86_64**. Or in Terminal:
@@ -233,6 +235,33 @@ open its data manager:
 - Deletion runs through `diskautoclean.sh --app-clean <path>…`, which re-checks that every
   path is inside `$HOME` and not in the protected list, so a bug in the UI cannot delete
   something like `~/Documents` or `~/Library/Keychains`.
+
+## Updates
+
+DiskCleaner can tell you when a newer release is out.
+
+- **Automatic** — checked at launch and every 12 hours (on by default).
+- **Manual** — ⚙️ Settings → 更新 → **检查更新**.
+- The current version is always shown there too, and in
+  **DiskCleaner → About DiskCleaner**.
+- When a newer version exists, a green **有新版本 x.y.z** pill appears in the main window
+  header and in the About window; clicking it opens the release page.
+
+**What the update check actually does**
+
+It performs a single `GET https://api.github.com/repos/wang90/disk-cleaner/releases/latest`
+with `User-Agent: DiskCleaner/<version>` — the same request your browser makes when you open
+the releases page. It reads only the version number and the release URL. Nothing about your
+Mac, your disk, your files or your usage is sent anywhere, and there is no analytics or
+telemetry of any kind.
+
+Prefer no network at all? Turn off **自动检查更新** in Settings → 更新; the app will then
+never open a socket.
+
+## Sharing
+
+- The header (and the About window) has a **share** button that opens the standard macOS
+  share sheet for the GitHub link — Mail, Messages, AirDrop, Notes, *Copy link*, …
 
 ## Safety
 

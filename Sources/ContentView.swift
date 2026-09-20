@@ -79,6 +79,17 @@ struct ContentView: View {
 
             Spacer()
 
+            // 有新版本时高亮提示
+            if case .available(let latest, let url, _) = model.updateState {
+                Button {
+                    model.openRelease(url)
+                } label: {
+                    Pill(icon: "sparkles", text: "有新版本 \(latest)", color: .green)
+                }
+                .buttonStyle(.plain)
+                .help("点击前往下载 \(latest)")
+            }
+
             Button {
                 Task { await model.refreshStatus() }
             } label: {
@@ -94,6 +105,13 @@ struct ContentView: View {
             }
             .help("重新扫描占用")
             .disabled(model.isScanning || model.isCleaning)
+
+            ShareLink(item: URL(string: AppInfo.repoURL)!,
+                      subject: Text("DiskCleaner"),
+                      message: Text("原生 macOS 储存空间清理工具，自动保持至少 10GB 可用空间")) {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .help("分享到…（GitHub 链接）")
 
             Button {
                 model.showSettings = true
@@ -821,6 +839,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     appearanceSection
                     menuBarSection
+                    updateSection
                     autoCleanSection
                     filesSection
                     aboutLinkSection
@@ -906,6 +925,91 @@ struct SettingsView: View {
                      + "空间低于目标时图标会变成感叹号。")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    // MARK: 更新
+    private var updateSection: some View {
+        SettingsGroup(title: "更新", icon: "arrow.triangle.2.circlepath") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text("当前版本")
+                        .font(.callout).foregroundStyle(.secondary)
+                    Text(AppInfo.displayVersion)
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .textSelection(.enabled)
+                    Spacer()
+                    Button {
+                        Task { await model.checkForUpdates(manual: true) }
+                    } label: {
+                        if case .checking = model.updateState {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("检查中…")
+                            }
+                        } else {
+                            Label("检查更新", systemImage: "arrow.clockwise")
+                        }
+                    }
+                    .controlSize(.small)
+                    .disabled({ if case .checking = model.updateState { return true }; return false }())
+                }
+
+                Toggle("自动检查更新（启动时 + 每 12 小时）", isOn: $model.autoCheckUpdates)
+
+                updateStatusRow
+
+                Text("这是本应用唯一会联网的地方：只向 GitHub 的公开 API 读取最新版本号，"
+                     + "不发送任何本地数据、不上报任何统计。关闭上面的开关即完全不联网。")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var updateStatusRow: some View {
+        switch model.updateState {
+        case .idle:
+            Label("尚未检查", systemImage: "circle.dashed")
+                .font(.caption).foregroundStyle(.secondary)
+
+        case .checking:
+            Label("正在检查…", systemImage: "arrow.triangle.2.circlepath")
+                .font(.caption).foregroundStyle(.secondary)
+
+        case .upToDate(let current):
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text("已是最新版本（\(current)）")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let t = model.lastUpdateCheck {
+                    Text("· \(t.formatted(date: .omitted, time: .shortened))")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                }
+            }
+
+        case .available(let latest, let url, _):
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles").foregroundStyle(.green)
+                Text("发现新版本 \(latest)")
+                    .font(.callout).fontWeight(.medium)
+                Button("前往下载") { model.openRelease(url) }
+                    .controlSize(.small)
+                Button("打开发布说明") {
+                    model.openRelease("\(AppInfo.releasesURL)/tag/v\(latest)")
+                }
+                .controlSize(.small)
+                .buttonStyle(.borderless)
+            }
+
+        case .failed(let message):
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Text("检查失败：\(message)")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
         }
     }

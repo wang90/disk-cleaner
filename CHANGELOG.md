@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-09-20
+
+### Added
+
+- **Update check** (Settings → 更新).
+  - Automatic: at launch and every 12 hours; can be switched off.
+  - Manual: a "检查更新" button, with the **current version** shown next to it.
+  - When a newer release exists, a green **有新版本 x.y.z** pill appears in the main window
+    header and in the About window; clicking it opens the release page.
+  - It performs a single `GET` to the public GitHub releases API and reads only the version
+    number — no telemetry, nothing about your Mac is sent. Turning the switch off means the
+    app never opens a socket. (README has a full explanation under *Updates*.)
+  - Version comparison is semver-aware (`1.0.0` > `1.0.0-beta.4`, `1.0.10` > `1.0.9`);
+    covered by a small comparison test.
+- **Share button** in the main window header and in the About window: opens the standard
+  macOS share sheet for the GitHub link (Mail, Messages, AirDrop, *Copy link*, …).
+- The last check time and the last seen version are remembered, so the Settings page can
+  show when the app last looked.
+
+### Changed
+
+- The update check now starts *before* the initial disk scans, so it no longer waits for
+  them to finish.
+- README no longer claims "no network access at all" — it now documents exactly what the
+  update check does and how to disable it.
+
 ## [1.0.0] — 2026-09-20
 
 **First stable release.** 🎉 Everything from the beta series, plus the polish below.
@@ -41,8 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Packaging
 
 - Downloads are now **per architecture** instead of one universal binary:
-  `DiskCleaner-v1.0.0-macos-arm64.zip` (Apple Silicon) and
-  `DiskCleaner-v1.0.0-macos-x86_64.zip` (Intel), plus `SHA256SUMS.txt`.
+  `DiskCleaner-v1.1.0-macos-arm64.zip` (Apple Silicon) and
+  `DiskCleaner-v1.1.0-macos-x86_64.zip` (Intel), plus `SHA256SUMS.txt`.
   - smaller downloads (≈568 KB / ≈600 KB instead of ≈1.0 MB),
   - `release.command` builds and verifies each slice separately and refuses to ship a
     package whose architecture does not match its file name,
