@@ -50,8 +50,28 @@ DiskCleaner 会告诉你磁盘空间到底去哪了（整盘 + macOS「储存空
 
 ### 直接下载
 
-到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 下载 `DiskCleaner-v1.0.0-macos-universal.zip`
-（标记为 *Pre-release*，即测试版），解压后把 `DiskCleaner.app` 拖进「应用程序」。
+到 **[Releases](https://github.com/wang90/disk-cleaner/releases)** 按你的芯片选对应包：
+
+| 你的 Mac | 下载 |
+|---|---|
+| **Apple 芯片**（M1 / M2 / M3 / M4 …） | `DiskCleaner-v1.0.0-macos-arm64.zip` |
+| **Intel 芯片** | `DiskCleaner-v1.0.0-macos-x86_64.zip` |
+
+不确定是哪种？点左上角  → **关于本机**：芯片写着 *Apple M…* 就选 **arm64**，
+写着 *Intel* 就选 **x86_64**。或者在终端执行：
+
+```bash
+uname -m      # arm64  -> Apple 芯片
+              # x86_64 -> Intel
+```
+
+同一个 Release 里的 `SHA256SUMS.txt` 是全部下载包的校验和：
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+解压后把 `DiskCleaner.app` 拖进「应用程序」。
 
 发布包是 **ad-hoc 签名**（未公证），首次打开会提示
 *"Apple 无法验证 DiskCleaner 是否包含恶意软件"*，这是正常的 ——

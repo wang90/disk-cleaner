@@ -31,24 +31,22 @@ jobs:
           ./scripts/diskautoclean.sh --version
           ./scripts/diskautoclean.sh --status
 
-      - name: Build the app
+      - name: Build & package (arm64 + x86_64)
         env:
           NO_OPEN: "1"
           DISKAPP_NO_PAUSE: "1"
-        run: ./build.command
-
-      - name: Package the release zip
-        env:
-          DISKAPP_NO_PAUSE: "1"
         run: ./release.command
+
+      - name: Show packages
+        run: ls -lh dist/
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DiskCleaner-macos-universal
+          name: DiskCleaner-macos
           path: |
             dist/*.zip
-            dist/*.sha256
+            dist/SHA256SUMS.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -57,6 +55,6 @@ jobs:
         with:
           files: |
             dist/*.zip
-            dist/*.sha256
+            dist/SHA256SUMS.txt
           generate_release_notes: true
           draft: false

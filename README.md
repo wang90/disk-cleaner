@@ -69,11 +69,30 @@ rundown, safety design and links to the repo and releases.
 
 ### Download
 
-Grab `DiskCleaner-v1.0.0-macos-universal.zip` from
-**[Releases](https://github.com/wang90/disk-cleaner/releases)** (marked *Pre-release*), unzip, and drag
-`DiskCleaner.app` into `/Applications`.
+Pick the build for your Mac from **[Releases](https://github.com/wang90/disk-cleaner/releases)**:
 
-The build is **ad-hoc signed** (not notarized), so the first launch shows
+| Your Mac | Download |
+|---|---|
+| **Apple Silicon** (M1 / M2 / M3 / M4 …) | `DiskCleaner-v1.0.0-macos-arm64.zip` |
+| **Intel** | `DiskCleaner-v1.0.0-macos-x86_64.zip` |
+
+Not sure which you have? Apple menu → **About This Mac**: if the chip line says *Apple M…*
+pick **arm64**; if it says *Intel* pick **x86_64**. Or in Terminal:
+
+```bash
+uname -m      # arm64  -> Apple Silicon
+              # x86_64 -> Intel
+```
+
+`SHA256SUMS.txt` in the same release lists the checksum of every download:
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+Unzip and drag `DiskCleaner.app` into `/Applications`.
+
+The builds are **ad-hoc signed** (not notarized), so the first launch shows
 *"Apple could not verify DiskCleaner is free of malware"*. That is expected — see
 [Gatekeeper](#gatekeeper) for the 10-second fix.
 

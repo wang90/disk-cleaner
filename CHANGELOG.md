@@ -38,6 +38,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `roots[@]: unbound variable` when an app had no data directory (bash 3.2 + `set -u`).
 - The per-app detail sheet no longer reopens itself if you close it mid-clean.
 
+### Packaging
+
+- Downloads are now **per architecture** instead of one universal binary:
+  `DiskCleaner-v1.0.0-macos-arm64.zip` (Apple Silicon) and
+  `DiskCleaner-v1.0.0-macos-x86_64.zip` (Intel), plus `SHA256SUMS.txt`.
+  - smaller downloads (≈568 KB / ≈600 KB instead of ≈1.0 MB),
+  - `release.command` builds and verifies each slice separately and refuses to ship a
+    package whose architecture does not match its file name,
+  - both packages contain an identical `Info.plist` and bundled script; only the
+    executable's architecture differs,
+  - a universal build is still available from source:
+    `ARCHS="arm64 x86_64" ./build.command`.
+
 ### Notes
 
 - Release builds are **ad-hoc signed, not notarized**, so the first launch needs
