@@ -11,6 +11,10 @@ caches and logs in the background so your Mac never runs out of space.
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Release](https://img.shields.io/badge/release-v1.1.0-brightgreen)](#download)
 
+**🌐 [Landing page](https://wang90.github.io/disk-cleaner/)** ·
+[Download](https://github.com/wang90/disk-cleaner/releases) ·
+[Changelog](CHANGELOG.md)
+
 > **Note:** the app UI is currently in **Simplified Chinese**.
 > English localization is on the [roadmap](#roadmap) — PRs are very welcome.
 > 中文说明见 **[README.zh-CN.md](README.zh-CN.md)**。

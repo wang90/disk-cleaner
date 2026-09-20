@@ -424,16 +424,16 @@ cd disk-cleaner
       }
       return null;
     }
-    function wire(id, labelId, suffix) {
+    function wire(id, labelId, suffix, label) {
       var a = pick(suffix);
       if (!a) return;
       var el = document.getElementById(id);
       el.href = a.browser_download_url;
       var kb = Math.round(a.size / 1024);
-      document.getElementById(labelId).textContent = suffix.replace('-', '') + ' · ' + kb + ' KB';
+      document.getElementById(labelId).textContent = label + ' · ' + kb + ' KB';
     }
-    wire('dl-arm', 'dl-arm-v', 'arm64.zip');
-    wire('dl-intel', 'dl-intel-v', 'x86_64.zip');
+    wire('dl-arm', 'dl-arm-v', 'arm64.zip', 'arm64');
+    wire('dl-intel', 'dl-intel-v', 'x86_64.zip', 'x86_64');
   }).catch(function () { /* 离线时保留指向 releases 页面的链接 */ });
 })();
 </script>

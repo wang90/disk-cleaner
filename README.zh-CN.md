@@ -10,6 +10,10 @@ DiskCleaner 会告诉你磁盘空间到底去哪了（整盘 + macOS「储存空
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+**🌐 [项目主页](https://wang90.github.io/disk-cleaner/)** ·
+[下载](https://github.com/wang90/disk-cleaner/releases) ·
+[更新日志](CHANGELOG.md)
+
 > English documentation: **[README.md](README.md)**
 
 ---
